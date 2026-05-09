@@ -9,10 +9,15 @@ export function TokenProvider({ children }) {
   const [activeTheme, setActiveTheme] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function syncTokens() {
+  async function syncTokens(forceRefresh = false) {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:4000/api/figma/${fileKey}/variables`);
+      const params = new URLSearchParams();
+      if (forceRefresh) {
+        params.set("forceRefresh", "true");
+      }
+      const queryString = params.toString();
+      const response = await fetch(`http://localhost:4000/api/figma/${fileKey}/variables${queryString ? `?${queryString}` : ""}`);
       const json = await response.json();
       setData(json);
 

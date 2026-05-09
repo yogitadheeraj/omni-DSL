@@ -61,6 +61,7 @@ export function BrandPreview() {
   } = useTokens();
   const [query, setQuery] = useState("");
   const [isTestButtonHovered, setIsTestButtonHovered] = useState(false);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   const themes = Object.keys(data?.brands ?? {});
   console.log("Available themes:", themes, activeTheme, data?.brands?.[activeTheme]);
@@ -201,7 +202,7 @@ export function BrandPreview() {
               </select>
 
               <button
-                onClick={syncTokens}
+                onClick={() => syncTokens(forceRefresh)}
                 className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
                 style={{
                   background: previewPrimary,
@@ -214,6 +215,16 @@ export function BrandPreview() {
                 <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                 {loading ? "Syncing" : "Sync Tokens"}
               </button>
+
+              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={forceRefresh}
+                  onChange={(e) => setForceRefresh(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                Force refresh (bypass Figma cache)
+              </label>
             </div>
           </div>
         </section>
@@ -264,6 +275,9 @@ export function BrandPreview() {
             {/* Brand Info */}
             <div className="rounded-2xl border border-slate-200 p-6 bg-gradient-to-br from-blue-50 to-cyan-50">
               <p className="text-xs uppercase tracking-wide text-slate-500">Active Brand : {activeBrandName}</p>
+              <p className="mt-2 text-xs text-slate-600">
+                Source: {data?.source ?? "-"} | Cache: {data?.cache?.hit ? "hit" : "miss"} | Omni DSL themes: {data?.omniDsl?.themeCount ?? 0}
+              </p>
 
               <div className="mt-4 flex items-center gap-3">
                 <span 
