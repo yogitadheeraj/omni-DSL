@@ -1,41 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Palette as Figma, Layers, Palette, RefreshCw, Tablet, Type } from "lucide-react";
 import { useTokens } from "../theme/TokenProvider";
-
-function tokenNameToCssVar(tokenName) {
-  return `--${tokenName.replaceAll(".", "-")}`;
-}
 
 function isColorToken(type, value) {
   if (String(type).toUpperCase() === "COLOR") return true;
   return /^(#([\da-f]{3,8})|rgb\(|rgba\(|hsl\(|hsla\()/i.test(String(value).trim());
-}
-
-function isSizeLike(value) {
-  return /^-?\d*\.?\d+(px|rem|em|%)$/i.test(String(value).trim());
-}
-
-function getTokenCategory(tokenName, tokenType) {
-  const type = String(tokenType).toLowerCase();
-  const name = tokenName.toLowerCase();
-
-  if (type.includes("color") || name.includes("color") || name.includes("brand")) return "Color";
-  if (name.includes("font") || name.includes("text") || name.includes("typography")) return "Typography";
-  if (name.includes("space") || name.includes("padding") || name.includes("margin") || name.includes("gap")) return "Spacing";
-  if (name.includes("radius") || name.includes("corner")) return "Border Radius";
-  if (name.includes("shadow") || name.includes("elevation")) return "Shadows";
-  if (name.includes("size") || name.includes("width") || name.includes("height")) return "Sizing";
-
-  return "Other";
-}
-
-function prettifyTokenName(tokenName) {
-  return tokenName
-    .replaceAll(".", " ")
-    .replaceAll("-", " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function firstTokenValue(tokens, names, fallback) {
@@ -59,78 +28,39 @@ export function BrandPreview() {
     loading,
     syncTokens
   } = useTokens();
-  const [query, setQuery] = useState("");
+  const [figmaToken, setFigmaToken] = useState("");
   const [isTestButtonHovered, setIsTestButtonHovered] = useState(false);
   const [forceRefresh, setForceRefresh] = useState(false);
+  const [previewMode, setPreviewMode] = useState("desktop");
 
   const themes = Object.keys(data?.brands ?? {});
   console.log("Available themes:", themes, activeTheme, data?.brands?.[activeTheme]);
   const activeTokens = data?.brands?.[activeTheme]?.tokens ?? {};
-  const tokenEntries = useMemo(() => {
-    return Object.entries(activeTokens).map(([name, token]) => {
-      const value = token?.value ?? "";
-      const resolvedValue = token?.resolvedValue ?? value;
-      const type = token?.type ?? "UNKNOWN";
-      const cssVar = tokenNameToCssVar(name);
+  const tokenEntries = useMemo(() => Object.entries(activeTokens).map(([name, token]) => ({
+    name,
+    value: token?.value ?? "",
+    resolvedValue: token?.resolvedValue ?? token?.value ?? "",
+    type: token?.type ?? "UNKNOWN",
+    isColor: isColorToken(token?.type, token?.resolvedValue ?? token?.value)
+  })), [activeTokens]);
 
-      return {
-        name,
-        displayName: prettifyTokenName(name),
-        value,
-        resolvedValue,
-        type,
-        cssVar,
-        isAlias: String(value).startsWith("alias:"),
-        isColor: isColorToken(type, resolvedValue),
-        isSizeLike: isSizeLike(resolvedValue),
-        category: getTokenCategory(name, type)
-      };
-    });
-  }, [activeTokens]);
-
-  const filteredTokens = useMemo(() => {
-    if (!query.trim()) return tokenEntries;
-
-    const lowerQuery = query.trim().toLowerCase();
-    return tokenEntries.filter((token) => {
-      return (
-        token.name.toLowerCase().includes(lowerQuery) ||
-        token.displayName.toLowerCase().includes(lowerQuery) ||
-        String(token.value).toLowerCase().includes(lowerQuery) ||
-        String(token.resolvedValue).toLowerCase().includes(lowerQuery) ||
-        String(token.type).toLowerCase().includes(lowerQuery) ||
-        token.category.toLowerCase().includes(lowerQuery)
-      );
-    });
-  }, [query, tokenEntries]);
-
-  const groupedTokens = useMemo(() => {
-    return filteredTokens.reduce((accumulator, token) => {
-      if (!accumulator[token.category]) {
-        accumulator[token.category] = [];
-      }
-      accumulator[token.category].push(token);
-      return accumulator;
-    }, {});
-  }, [filteredTokens]);
+  const colorTokens = useMemo(() => tokenEntries.filter((token) => token.isColor).slice(0, 5), [tokenEntries]);
 
   const summary = useMemo(() => {
     const colorCount = tokenEntries.filter((token) => token.isColor).length;
-    const aliasCount = tokenEntries.filter((token) => token.isAlias).length;
-    const categories = new Set(tokenEntries.map((token) => token.category)).size;
-
     return {
-      total: tokenEntries.length,
-      colorCount,
-      aliasCount,
-      categories
+      pages: 0,
+      components: tokenEntries.length,
+      brands: themes.length,
+      patterns: colorCount
     };
-  }, [tokenEntries]);
+  }, [tokenEntries, themes.length]);
 
-  // Test variables
   const activeBrandName = data?.brands?.[activeTheme]?.name ?? "No theme selected";
   const previewPrimary = firstTokenValue(activeTokens, ["color.brand.primary.base", "color.primary", "brand.primary"], "#111827");
+  const previewSecondary = firstTokenValue(activeTokens, ["color.brand.secondary.base", "color.secondary", "brand.secondary"], "#e5e7eb");
   const previewInverse = firstTokenValue(activeTokens, ["color.text.inverse", "text.inverse"], "#ffffff");
+  const previewText = firstTokenValue(activeTokens, ["color.text.default", "text.default"], "#111827");
   const previewRadius = firstTokenValue(activeTokens, ["radius.card", "radius.md", "radius.lg"], "12px");
   const previewFont = firstTokenValue(activeTokens, ["font.family.base", "font.family.primary"], "Inter");
   const buttonPaddingY = firstTokenValue(activeTokens, ["button.md.padding-y", "button.padding-y", "spacing.sm"], "8px");
@@ -171,125 +101,247 @@ export function BrandPreview() {
     ["button.primary.hover.radius", "button.primary.radius.hover"],
     buttonBaseRadius
   );
+
+  const metricCards = [
+    { label: "Figma Pages", value: summary.pages, icon: Figma },
+    { label: "Components", value: summary.components, icon: Layers },
+    { label: "Brands", value: summary.brands, icon: Palette },
+    { label: "Patterns", value: summary.patterns, icon: Type }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-cyan-50 p-6">
-      <div className="mx-auto max-w-2xl">
-        {/* Header Section */}
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm mb-6">
-          <div className="bg-gradient-to-r from-slate-900 to-slate-700 p-6 text-white">
-            <h1 className="text-3xl font-bold">Token Testing - Classes & Styles</h1>
-            <p className="mt-2 text-sm text-slate-200">Test single label, input, and button with all applied classes</p>
+    <div className="min-h-screen bg-[#f4f6fb] p-4 md:p-6" style={{ fontFamily: previewFont }}>
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+            
+            </span>
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900">Brand Storybook Portal</h1>
+              <p className="text-xs text-slate-500">Live Figma sync + multi-brand React design system</p>
+            </div>
           </div>
+          <button
+            onClick={() => syncTokens(forceRefresh)}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all"
+            style={{
+              background: isTestButtonHovered ? buttonHoverBg : buttonBaseBg,
+              color: isTestButtonHovered ? buttonHoverText : buttonBaseText,
+              border: `1px solid ${isTestButtonHovered ? buttonHoverBorder : buttonBaseBorder}`,
+              borderRadius: isTestButtonHovered ? buttonHoverRadius : buttonBaseRadius
+            }}
+            onMouseEnter={() => setIsTestButtonHovered(true)}
+            onMouseLeave={() => setIsTestButtonHovered(false)}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {loading ? "Syncing..." : "Sync Figma"}
+          </button>
+        </header>
 
-          <div className="p-6 space-y-4">
-            <div className="grid gap-3">
-              <input
-                value={fileKey}
-                onChange={(e) => setFileKey(e.target.value)}
-                placeholder="Figma file key"
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400"
-              />
+        <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+          <aside className="space-y-4">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">Figma Connection</h2>
+              <div className="space-y-3">
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-500">Figma File Key</p>
+                  <input
+                    value={fileKey}
+                    onChange={(e) => setFileKey(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-500">Figma Token</p>
+                  <input
+                    type="password"
+                    value={figmaToken}
+                    onChange={(e) => setFigmaToken(e.target.value)}
+                    placeholder="************************"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                  />
+                </div>
+                <button
+                  onClick={() => syncTokens(forceRefresh)}
+                  className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-white cursor-pointer transition-all"
+                  style={{ background: previewPrimary }}
+                >
+                  Fetch Figma Pages
+                </button>
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"
+                >
+                  Run Enterprise Sync
+                </button>
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={forceRefresh}
+                    onChange={(e) => setForceRefresh(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  Force refresh cache
+                </label>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  Recommended: keep token on backend only.
+                </div>
+              </div>
+            </section>
 
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="mb-2 text-sm font-semibold text-slate-900">Brand</h3>
               <select
                 value={activeTheme}
                 onChange={(e) => setActiveTheme(e.target.value)}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
               >
-                <option value="">Select theme</option>
+                <option value="">Select brand</option>
                 {themes.map((theme) => (
-                  <option key={theme} value={theme}>{data.brands[theme].name}</option>
+                  <option key={theme} value={theme}>{data?.brands?.[theme]?.name ?? theme}</option>
                 ))}
               </select>
+            </section>
 
-              <button
-                onClick={() => syncTokens(forceRefresh)}
-                className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
-                style={{
-                  background: previewPrimary,
-                  color: previewInverse,
-                  border: `1px solid ${previewPrimary}`,
-                  borderRadius: previewRadius,
-                  fontFamily: previewFont
-                }}
-              >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                {loading ? "Syncing" : "Sync Tokens"}
-              </button>
-
-              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={forceRefresh}
-                  onChange={(e) => setForceRefresh(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                Force refresh (bypass Figma cache)
-              </label>
-            </div>
-          </div>
-        </section>
-
-        {/* Test Section - Single Label, Input, Button */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Test Elements</p>
-          <h2 className="mt-2 text-2xl font-bold text-slate-900">Minimal Testing UI</h2>
-          
-          <div className="mt-6 space-y-6">
-            {/* Test Input with Label */}
-            <div className="rounded-2xl border border-slate-200 p-6 bg-slate-50">
-              <label htmlFor="testInput" className="text-sm font-semibold text-slate-900 block mb-3">
-                Test Label for Input
-              </label>
-              <input
-                id="testInput"
-                type="text"
-                placeholder="Test input with all classes"
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-              />
-            </div>
-
-            {/* Test Button */}
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-              <p className="text-sm font-semibold text-slate-900 mb-3">Test Button</p>
-              <button
-                type="button"
-                onMouseEnter={() => setIsTestButtonHovered(true)}
-                onMouseLeave={() => setIsTestButtonHovered(false)}
-                className="font-semibold transition-all duration-200"
-                style={{
-                  background: isTestButtonHovered ? buttonHoverBg : buttonBaseBg,
-                  color: isTestButtonHovered ? buttonHoverText : buttonBaseText,
-                  borderRadius: isTestButtonHovered ? buttonHoverRadius : buttonBaseRadius,
-                  padding: `${buttonPaddingY} ${buttonPaddingX}`,
-                  border: `1px solid ${isTestButtonHovered ? buttonHoverBorder : buttonBaseBorder}`,
-                  fontFamily: previewFont
-                }}
-              >
-                Test Button with Token Styles
-              </button>
-              <p className="mt-3 text-xs text-slate-600">
-                Base: {buttonBaseBg} | Hover: {buttonHoverBg} | Radius: {isTestButtonHovered ? buttonHoverRadius : buttonBaseRadius}
-              </p>
-            </div>
-
-            {/* Brand Info */}
-            <div className="rounded-2xl border border-slate-200 p-6 bg-gradient-to-br from-blue-50 to-cyan-50">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Active Brand : {activeBrandName}</p>
-              <p className="mt-2 text-xs text-slate-600">
-                Source: {data?.source ?? "-"} | Cache: {data?.cache?.hit ? "hit" : "miss"} | Omni DSL themes: {data?.omniDsl?.themeCount ?? 0}
-              </p>
-
-              <div className="mt-4 flex items-center gap-3">
-                <span 
-                  className="h-8 w-8 rounded-lg border border-slate-300"
-                  style={{ background: previewPrimary }}
-                  title="Primary Color"
-                />
-                <span className="text-sm text-slate-600">Primary Color: {previewPrimary}</span>
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">Preview</h3>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("desktop")}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+                  style={{ background: previewMode === "desktop" ? previewPrimary : "#f1f5f9", color: previewMode === "desktop" ? previewInverse : "#0f172a" }}
+                >
+                  <Layers size={14} /> Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("tablet")}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+                  style={{ background: previewMode === "tablet" ? previewPrimary : "#f1f5f9", color: previewMode === "tablet" ? previewInverse : "#0f172a" }}
+                >
+                  <Tablet size={14} /> Tablet
+                </button>
               </div>
-            </div>
-          </div>
-        </section>
+            </section>
+          </aside>
+
+          <main className="space-y-4">
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {metricCards.map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <article key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white">
+                      <Icon size={15} />
+                    </span>
+                    <p className="text-3xl font-bold text-slate-900">{metric.value}</p>
+                    <p className="text-sm text-slate-500">{metric.label}</p>
+                  </article>
+                );
+              })}
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-slate-900">Live Figma Pages</h2>
+                  <p className="text-sm text-slate-500">Fetch page-wise nodes and convert them into Storybook review items.</p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">No Data Yet</span>
+              </div>
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                No pages loaded yet. Enter file key and click Fetch Figma Pages.
+              </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-[2fr_1.3fr]">
+              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-slate-900">Storybook Page Preview</h3>
+                    <p className="text-sm text-slate-500">Selected Figma page rendered as business review preview.</p>
+                  </div>
+                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">Default / {previewMode}</span>
+                </div>
+
+                <div className="rounded-2xl bg-slate-100 p-6">
+                  <div
+                    className="mx-auto max-w-md rounded-2xl p-6 text-white"
+                    style={{
+                      background: `linear-gradient(145deg, ${previewPrimary}, #0f172a)`,
+                      borderRadius: previewRadius
+                    }}
+                  >
+                    <p className="text-sm opacity-80">Figma Page</p>
+                    <h4 className="mt-2 text-lg font-semibold">Business Review</h4>
+                    <p className="mt-2 text-sm opacity-90">
+                      This section represents a live Storybook preview generated from Figma metadata and mapped React components.
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-4 text-sm font-semibold transition-all"
+                      style={{
+                        background: isTestButtonHovered ? buttonHoverBg : buttonBaseBg,
+                        color: isTestButtonHovered ? buttonHoverText : buttonBaseText,
+                        borderRadius: isTestButtonHovered ? buttonHoverRadius : buttonBaseRadius,
+                        padding: `${buttonPaddingY} ${buttonPaddingX}`,
+                        border: `1px solid ${isTestButtonHovered ? buttonHoverBorder : buttonBaseBorder}`
+                      }}
+                      onMouseEnter={() => setIsTestButtonHovered(true)}
+                      onMouseLeave={() => setIsTestButtonHovered(false)}
+                    >
+                      Review Action
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="text-2xl font-semibold text-slate-900">Design Tokens</h3>
+                <p className="mb-4 text-sm text-slate-500">Synced from Figma variables and applied per selected brand mode.</p>
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                    Active Brand: <span className="font-semibold">{activeBrandName}</span><br />
+                    Source: {data?.source ?? "-"} | Cache: {data?.cache?.hit ? "hit" : "miss"} | Omni DSL themes: {data?.omniDsl?.themeCount ?? 0}
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Semantic / Primary</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-900">{previewPrimary}</span>
+                      <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewPrimary }} />
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Semantic / Secondary</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-900">{previewSecondary}</span>
+                      <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewSecondary }} />
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Text / Default</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-900">{previewText}</span>
+                      <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewText }} />
+                    </div>
+                  </div>
+
+                  {colorTokens.map((token) => (
+                    <div key={token.name} className="rounded-xl border border-slate-200 bg-white p-3">
+                      <p className="text-xs text-slate-500">{token.name}</p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-900">{token.resolvedValue}</span>
+                        <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: token.resolvedValue }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
+          </main>
+        </div>
       </div>
     </div>
   );
