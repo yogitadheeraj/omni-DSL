@@ -18,6 +18,11 @@ function firstTokenValue(tokens, names, fallback) {
   return fallback;
 }
 
+function toNumber(value, fallback) {
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export function BrandPreview() {
   const {
     fileKey,
@@ -32,6 +37,8 @@ export function BrandPreview() {
   const [isTestButtonHovered, setIsTestButtonHovered] = useState(false);
   const [forceRefresh, setForceRefresh] = useState(false);
   const [previewMode, setPreviewMode] = useState("desktop");
+  const [previewModeOverridden, setPreviewModeOverridden] = useState(false);
+  const [selectedGutterToken, setSelectedGutterToken] = useState(null); // name of selected gutter token
 
   const themes = Object.keys(data?.brands ?? {});
   console.log("Available themes:", themes, activeTheme, data?.brands?.[activeTheme]);
@@ -102,6 +109,140 @@ export function BrandPreview() {
     buttonBaseRadius
   );
 
+  const layoutPagePadding = firstTokenValue(
+    activeTokens,
+    ["layout.page.padding", "spacing.layout.page", "spacing.lg", "spacing.md"],
+    "24px"
+  );
+  const layoutSectionGap = firstTokenValue(
+    activeTokens,
+    ["layout.section.gap", "layout.gap.section", "spacing.layout.section", "spacing.md"],
+    "16px"
+  );
+  const layoutGridGutter = firstTokenValue(
+    activeTokens,
+    ["layout.grid.gutter", "grid.gutter", "spacing.layout.gutter", "spacing.md"],
+    "16px"
+  );
+
+  // Collect all gutter-related tokens grouped by breakpoint/type
+  const gutterTokenEntries = useMemo(() => {
+    const gutterPattern = /gutter/i;
+    const found = Object.entries(activeTokens)
+      .filter(([name]) => gutterPattern.test(name))
+      .map(([name, token]) => ({
+        name,
+        value: token?.resolvedValue ?? token?.value ?? "",
+        type: token?.type ?? "UNKNOWN",
+      }))
+      .filter(({ value }) => value && !String(value).startsWith("alias:"));
+    // Derive a short label: last segment of the token name
+    return found.map((entry) => {
+      const parts = entry.name.split(".");
+      const label = parts[parts.length - 1];
+      // Detect breakpoint hint
+      const breakpoint = ["desktop", "tablet", "mobile", "sm", "md", "lg", "xl"].find(
+        (bp) => entry.name.toLowerCase().includes(bp)
+      ) ?? null;
+      return { ...entry, label, breakpoint };
+    });
+  }, [activeTokens]);
+  const layoutCardGutter = firstTokenValue(
+    activeTokens,
+    ["layout.card.gap", "layout.grid.card-gap", "spacing.layout.card", "spacing.sm"],
+    "12px"
+  );
+  const layoutSidebarWidth = firstTokenValue(
+    activeTokens,
+    ["layout.sidebar.width", "layout.grid.sidebar-width"],
+    "320px"
+  );
+  const layoutContainerMaxWidth = firstTokenValue(
+    activeTokens,
+    ["layout.container.max-width", "layout.max-width", "sizing.container.max"],
+    "1280px"
+  );
+  const metricColumnsDesktop = toNumber(
+    firstTokenValue(activeTokens, ["layout.grid.metrics.columns.desktop", "layout.grid.columns.desktop"], "4"),
+    4
+  );
+  const metricColumnsTablet = toNumber(
+    firstTokenValue(activeTokens, ["layout.grid.metrics.columns.tablet", "layout.grid.columns.tablet"], "2"),
+    2
+  );
+  const metricColumnMinWidth = firstTokenValue(
+    activeTokens,
+    ["layout.grid.metrics.min-width", "layout.grid.min-column-width"],
+    "190px"
+  );
+  const layoutHeaderPaddingX = firstTokenValue(
+    activeTokens,
+    ["layout.header.padding-x", "layout.surface.header.padding-x", "spacing.lg", "spacing.md"],
+    "16px"
+  );
+  const layoutHeaderPaddingY = firstTokenValue(
+    activeTokens,
+    ["layout.header.padding-y", "layout.surface.header.padding-y", "spacing.md", "spacing.sm"],
+    "16px"
+  );
+  const layoutSectionPadding = firstTokenValue(
+    activeTokens,
+    ["layout.section.padding", "layout.surface.section.padding", "spacing.md"],
+    "16px"
+  );
+  const layoutPanelPadding = firstTokenValue(
+    activeTokens,
+    ["layout.panel.padding", "layout.surface.panel.padding", "spacing.md", "spacing.sm"],
+    "12px"
+  );
+  const layoutCanvasPadding = firstTokenValue(
+    activeTokens,
+    ["layout.canvas.padding", "layout.preview.canvas.padding", "spacing.lg", "spacing.md"],
+    "24px"
+  );
+  const radiusHeader = firstTokenValue(
+    activeTokens,
+    ["radius.surface.header", "radius.xl", "radius.lg", "radius.card"],
+    "16px"
+  );
+  const radiusSection = firstTokenValue(
+    activeTokens,
+    ["radius.surface.section", "radius.lg", "radius.card", "radius.md"],
+    "16px"
+  );
+  const radiusPanel = firstTokenValue(
+    activeTokens,
+    ["radius.surface.panel", "radius.md", "radius.sm"],
+    "12px"
+  );
+  const previewSplitLeft = firstTokenValue(
+    activeTokens,
+    ["layout.grid.preview.left", "layout.preview.split.left", "layout.grid.preview.columns.left"],
+    "2fr"
+  );
+  const previewSplitRight = firstTokenValue(
+    activeTokens,
+    ["layout.grid.preview.right", "layout.preview.split.right", "layout.grid.preview.columns.right"],
+    "1.3fr"
+  );
+
+  // Token-sourced preview mode
+  const tokenPreviewModeRaw = firstTokenValue(
+    activeTokens,
+    ["layout.preview.mode", "layout.grid.preview.mode", "preview.mode", "layout.breakpoint.default"],
+    ""
+  );
+  const tokenPreviewMode = ["tablet", "mobile"].includes(String(tokenPreviewModeRaw).toLowerCase())
+    ? String(tokenPreviewModeRaw).toLowerCase()
+    : tokenPreviewModeRaw ? "desktop" : "";
+
+  const effectivePreviewMode = previewModeOverridden ? previewMode : (tokenPreviewMode || previewMode);
+
+  function handleSetPreviewMode(mode) {
+    setPreviewMode(mode);
+    setPreviewModeOverridden(true);
+  }
+
   const metricCards = [
     { label: "Figma Pages", value: summary.pages, icon: Figma },
     { label: "Components", value: summary.components, icon: Layers },
@@ -110,12 +251,18 @@ export function BrandPreview() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] p-4 md:p-6" style={{ fontFamily: previewFont }}>
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+    <div className="min-h-screen bg-[#f4f6fb]" style={{ fontFamily: previewFont, padding: layoutPagePadding }}>
+      <div className="mx-auto" style={{ maxWidth: layoutContainerMaxWidth }}>
+        <header
+          className="mb-5 flex items-center justify-between border border-slate-200 bg-white shadow-sm"
+          style={{
+            borderRadius: radiusHeader,
+            padding: `${layoutHeaderPaddingY} ${layoutHeaderPaddingX}`
+          }}
+        >
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-            
+              <Figma size={18} />
             </span>
             <div>
               <h1 className="text-xl font-semibold text-slate-900">Brand Storybook Portal</h1>
@@ -139,11 +286,14 @@ export function BrandPreview() {
           </button>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-          <aside className="space-y-4">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid lg:grid-cols-[auto_1fr]" style={{ gap: layoutGridGutter }}>
+          <aside style={{ display: "grid", gap: layoutSectionGap, width: layoutSidebarWidth, maxWidth: "100%" }}>
+            <section
+              className="border border-slate-200 bg-white shadow-sm"
+              style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
+            >
               <h2 className="mb-3 text-sm font-semibold text-slate-900">Figma Connection</h2>
-              <div className="space-y-3">
+              <div style={{ display: "grid", gap: layoutCardGutter }}>
                 <div>
                   <p className="mb-1 text-xs font-medium text-slate-500">Figma File Key</p>
                   <input
@@ -188,10 +338,7 @@ export function BrandPreview() {
                   Recommended: keep token on backend only.
                 </div>
               </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="mb-2 text-sm font-semibold text-slate-900">Brand</h3>
+               <h3 className="mb-3 mt-2 text-sm font-semibold text-slate-900">Brand</h3>
               <select
                 value={activeTheme}
                 onChange={(e) => setActiveTheme(e.target.value)}
@@ -202,37 +349,55 @@ export function BrandPreview() {
                   <option key={theme} value={theme}>{data?.brands?.[theme]?.name ?? theme}</option>
                 ))}
               </select>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">Preview</h3>
-              <div className="space-y-2">
-                <button
+                 <h2 className="mb-3  mt-2 text-sm font-semibold text-slate-900">Preview</h2>
+              <div style={{ display: "grid", gap: layoutCardGutter }}>
+                {tokenPreviewMode && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                    Token default: <span className="font-semibold" style={{ color: previewPrimary }}>{tokenPreviewMode}</span>
+                  </div>
+                )}
+                {gutterTokenEntries.length > 0 && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 inline-flex flex-col gap-2">
+                    Detected gutter tokens:
+                      {gutterTokenEntries.map((token) => (
+             
+                             <button
                   type="button"
-                  onClick={() => setPreviewMode("desktop")}
+                  onClick={() => handleSetPreviewMode("desktop")}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
-                  style={{ background: previewMode === "desktop" ? previewPrimary : "#f1f5f9", color: previewMode === "desktop" ? previewInverse : "#0f172a" }}
+                  style={{ background: effectivePreviewMode === "desktop" ? previewPrimary : "#f1f5f9", color: effectivePreviewMode === "desktop" ? previewInverse : "#0f172a" }}
                 >
-                  <Layers size={14} /> Desktop
+                  <Layers size={14} />  ({token.breakpoint})
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewMode("tablet")}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
-                  style={{ background: previewMode === "tablet" ? previewPrimary : "#f1f5f9", color: previewMode === "tablet" ? previewInverse : "#0f172a" }}
-                >
-                  <Tablet size={14} /> Tablet
-                </button>
+                         
+                      ))}
+                  
+                  </div>
+                )}
+              
               </div>
             </section>
+
+           
+           
           </aside>
 
-          <main className="space-y-4">
-            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <main style={{ display: "grid", gap: layoutSectionGap }}>
+            <section
+              className="grid"
+              style={{
+                gap: layoutCardGutter,
+                gridTemplateColumns: `repeat(${effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet}, minmax(${metricColumnMinWidth}, 1fr))`
+              }}
+            >
               {metricCards.map((metric) => {
                 const Icon = metric.icon;
                 return (
-                  <article key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <article
+                    key={metric.label}
+                    className="border border-slate-200 bg-white shadow-sm"
+                    style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
+                  >
                     <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white">
                       <Icon size={15} />
                     </span>
@@ -243,7 +408,10 @@ export function BrandPreview() {
               })}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <section
+              className="border border-slate-200 bg-white shadow-sm"
+              style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
+            >
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-900">Live Figma Pages</h2>
@@ -256,22 +424,33 @@ export function BrandPreview() {
               </div>
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-[2fr_1.3fr]">
-              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <section
+              className="grid gap-4 lg:grid-cols-[var(--layout-preview-left)_var(--layout-preview-right)]"
+              style={{
+                gap: layoutGridGutter,
+                "--layout-preview-left": previewSplitLeft,
+                "--layout-preview-right": previewSplitRight
+              }}
+            >
+              <article
+                className="border border-slate-200 bg-white shadow-sm"
+                style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
+              >
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h3 className="text-2xl font-semibold text-slate-900">Storybook Page Preview</h3>
                     <p className="text-sm text-slate-500">Selected Figma page rendered as business review preview.</p>
                   </div>
-                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">Default / {previewMode}</span>
+                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">Default / {effectivePreviewMode}</span>
                 </div>
 
-                <div className="rounded-2xl bg-slate-100 p-6">
+                <div className="bg-slate-100" style={{ borderRadius: radiusPanel, padding: layoutCanvasPadding }}>
                   <div
-                    className="mx-auto max-w-md rounded-2xl p-6 text-white"
+                    className="mx-auto max-w-md text-white"
                     style={{
                       background: `linear-gradient(145deg, ${previewPrimary}, #0f172a)`,
-                      borderRadius: previewRadius
+                      borderRadius: radiusPanel,
+                      padding: layoutCanvasPadding
                     }}
                   >
                     <p className="text-sm opacity-80">Figma Page</p>
@@ -298,29 +477,32 @@ export function BrandPreview() {
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <article
+                className="border border-slate-200 bg-white shadow-sm"
+                style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
+              >
                 <h3 className="text-2xl font-semibold text-slate-900">Design Tokens</h3>
                 <p className="mb-4 text-sm text-slate-500">Synced from Figma variables and applied per selected brand mode.</p>
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                <div style={{ display: "grid", gap: layoutCardGutter }}>
+                  <div className="border border-slate-200 bg-slate-50 text-xs text-slate-600" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
                     Active Brand: <span className="font-semibold">{activeBrandName}</span><br />
                     Source: {data?.source ?? "-"} | Cache: {data?.cache?.hit ? "hit" : "miss"} | Omni DSL themes: {data?.omniDsl?.themeCount ?? 0}
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="border border-slate-200 bg-slate-50" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
                     <p className="text-xs text-slate-500">Semantic / Primary</p>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-sm font-semibold text-slate-900">{previewPrimary}</span>
                       <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewPrimary }} />
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="border border-slate-200 bg-slate-50" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
                     <p className="text-xs text-slate-500">Semantic / Secondary</p>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-sm font-semibold text-slate-900">{previewSecondary}</span>
                       <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewSecondary }} />
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="border border-slate-200 bg-slate-50" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
                     <p className="text-xs text-slate-500">Text / Default</p>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-sm font-semibold text-slate-900">{previewText}</span>
@@ -329,7 +511,11 @@ export function BrandPreview() {
                   </div>
 
                   {colorTokens.map((token) => (
-                    <div key={token.name} className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div
+                      key={token.name}
+                      className="border border-slate-200 bg-white"
+                      style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}
+                    >
                       <p className="text-xs text-slate-500">{token.name}</p>
                       <div className="mt-2 flex items-center justify-between">
                         <span className="text-sm font-semibold text-slate-900">{token.resolvedValue}</span>
@@ -340,6 +526,253 @@ export function BrandPreview() {
                 </div>
               </article>
             </section>
+
+            {/* Grid & Gutter Visual Preview */}
+            <section
+              className="border border-slate-200 bg-white shadow-sm"
+              style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">Grid &amp; Gutter Preview</h2>
+                  <p className="text-sm text-slate-500">Live layout token values visualised as measurement guides.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {tokenPreviewMode ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                      <span className="h-2 w-2 rounded-full" style={{ background: previewPrimary }} />
+                      Token: {tokenPreviewMode}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs text-slate-400">No mode token</span>
+                  )}
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: previewPrimary }}>
+                    Active: {effectivePreviewMode}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="mb-4 flex items-center gap-3 rounded-lg text-xs"
+                style={{ padding: layoutPanelPadding, background: tokenPreviewMode ? "#f0fdf4" : "#fafafa", border: tokenPreviewMode ? "1px solid #bbf7d0" : "1px solid #e2e8f0" }}
+              >
+                <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: tokenPreviewMode ? "#16a34a" : "#94a3b8" }} />
+                <div className="flex-1">
+                  <span className="font-semibold text-slate-700">layout.preview.mode</span>
+                  <span className="mx-2 text-slate-400">→</span>
+                  <span className="font-mono" style={{ color: tokenPreviewMode ? "#15803d" : "#64748b" }}>
+                    {tokenPreviewMode || "(not set — UI default used)"}
+                  </span>
+                  {previewModeOverridden && <span className="ml-3 text-amber-600">(manually overridden)</span>}
+                </div>
+                {previewModeOverridden && (
+                  <button type="button" onClick={() => setPreviewModeOverridden(false)} className="text-xs text-slate-500 underline hover:text-slate-800">
+                    Reset to token
+                  </button>
+                )}
+              </div>
+
+              {/* Gutter type selector — all layout.grid.gutter variants */}
+              {gutterTokenEntries.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    Grid Gutter Types ({gutterTokenEntries.length} found)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedGutterToken(null)}
+                      className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all"
+                      style={{
+                        background: selectedGutterToken === null ? previewPrimary : "#f1f5f9",
+                        color: selectedGutterToken === null ? previewInverse : "#0f172a",
+                        borderColor: selectedGutterToken === null ? previewPrimary : "#e2e8f0",
+                      }}
+                    >
+                      Default ({layoutGridGutter})
+                    </button>
+                    {gutterTokenEntries.map((entry) => (
+                      <button
+                        key={entry.name}
+                        type="button"
+                        onClick={() => setSelectedGutterToken(entry.name)}
+                        className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all"
+                        style={{
+                          background: selectedGutterToken === entry.name ? previewPrimary : "#f1f5f9",
+                          color: selectedGutterToken === entry.name ? previewInverse : "#0f172a",
+                          borderColor: selectedGutterToken === entry.name ? previewPrimary : "#e2e8f0",
+                        }}
+                      >
+                        <span className="font-mono">{entry.label}</span>
+                        <span className="ml-1.5 opacity-70">{entry.value}</span>
+                        {entry.breakpoint && (
+                          <span
+                            className="ml-1.5 rounded px-1 text-[10px] font-bold uppercase"
+                            style={{ background: previewPrimary, opacity: 0.8, color: previewInverse }}
+                          >
+                            {entry.breakpoint}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedGutterToken && (() => {
+                    const sel = gutterTokenEntries.find((e) => e.name === selectedGutterToken);
+                    return sel ? (
+                      <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                        <span className="font-semibold">{sel.name}</span>
+                        <span className="mx-2 text-slate-400">→</span>
+                        <span className="font-mono font-semibold" style={{ color: previewPrimary }}>{sel.value}</span>
+                        <span className="ml-2 text-slate-400">({sel.type})</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {/* Token value rows */}
+              {[
+                { label: "layout.grid.gutter", token: "Grid Gutter", value: layoutGridGutter, color: previewPrimary },
+                { label: "layout.card.gap", token: "Card Gap", value: layoutCardGutter, color: "#6366f1" },
+                { label: "layout.section.gap", token: "Section Gap", value: layoutSectionGap, color: "#0ea5e9" },
+                { label: "layout.page.padding", token: "Page Padding", value: layoutPagePadding, color: "#10b981" },
+                { label: "layout.sidebar.width", token: "Sidebar Width", value: layoutSidebarWidth, color: "#f59e0b" },
+                { label: "layout.header.padding-x", token: "Header Pad X", value: layoutHeaderPaddingX, color: "#ec4899" },
+                { label: "layout.header.padding-y", token: "Header Pad Y", value: layoutHeaderPaddingY, color: "#8b5cf6" },
+                { label: "layout.section.padding", token: "Section Padding", value: layoutSectionPadding, color: "#14b8a6" },
+                { label: "layout.panel.padding", token: "Panel Padding", value: layoutPanelPadding, color: "#f97316" },
+                { label: "layout.canvas.padding", token: "Canvas Padding", value: layoutCanvasPadding, color: "#ef4444" },
+              ].map(({ label, token, value, color }) => {
+                const numericPx = Number.parseInt(String(value), 10) || 0;
+                const barMaxPx = 320;
+                const barWidthPct = Math.min((numericPx / barMaxPx) * 100, 100);
+                return (
+                  <div
+                    key={label}
+                    className="mb-3 last:mb-0"
+                    style={{ borderRadius: radiusPanel, padding: layoutPanelPadding, background: "#f8fafc", border: "1px solid #e2e8f0" }}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-700">{token}</span>
+                        <span className="ml-2 text-xs text-slate-400">{label}</span>
+                      </div>
+                      <span
+                        className="rounded px-2 py-0.5 text-xs font-bold text-white"
+                        style={{ background: color }}
+                      >
+                        {value}
+                      </span>
+                    </div>
+                    {/* Visual bar representing the pixel size */}
+                    <div className="relative h-4 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                        style={{ width: `${barWidthPct}%`, background: color, opacity: 0.85 }}
+                      />
+                      {/* Tick marks every 25% */}
+                      {[25, 50, 75].map((pct) => (
+                        <div
+                          key={pct}
+                          className="absolute inset-y-0 w-px bg-white/60"
+                          style={{ left: `${pct}%` }}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-1 text-right text-[10px] text-slate-400">{numericPx}px of {barMaxPx}px scale</p>
+                  </div>
+                );
+              })}
+
+              {/* Live grid simulation */}
+              <div className="mt-6">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Live Grid Simulation</p>
+
+                {/* Column gutter demo */}
+                <div className="mb-4">
+                  {(() => {
+                    const sel = gutterTokenEntries.find((e) => e.name === selectedGutterToken);
+                    const activeGutter = sel ? sel.value : layoutGridGutter;
+                    const activeGutterLabel = sel ? `${sel.label} (${activeGutter})` : `default (${activeGutter})`;
+                    return (
+                      <>
+                        <p className="mb-2 text-xs text-slate-500">
+                          Column gutter: <strong>{activeGutterLabel}</strong>
+                          {sel && <span className="ml-2 font-mono text-slate-400">{sel.name}</span>}
+                        </p>
+                        <div className="flex overflow-hidden rounded-lg" style={{ gap: activeGutter }}>
+                          {Array.from({ length: effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="flex-1 py-3 text-center text-xs font-medium text-white"
+                              style={{ background: previewPrimary, borderRadius: radiusPanel, opacity: 0.75 + i * 0.05 }}
+                            >
+                              Col {i + 1}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Show all gutter variants as mini demos when no token selected */}
+                        {!selectedGutterToken && gutterTokenEntries.length > 1 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">All gutter variants:</p>
+                            {gutterTokenEntries.map((entry) => (
+                              <div key={entry.name}>
+                                <p className="mb-1 text-[10px] text-slate-400">
+                                  <span className="font-mono">{entry.name}</span> → <strong>{entry.value}</strong>
+                                </p>
+                                <div className="flex overflow-hidden rounded" style={{ gap: entry.value }}>
+                                  {Array.from({ length: effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet }).map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className="flex-1 py-2 text-center text-[10px] font-medium text-white"
+                                      style={{ background: previewPrimary, borderRadius: radiusPanel, opacity: 0.6 + i * 0.05 }}
+                                    >
+                                      {i + 1}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Section gap demo */}
+                <div className="mb-2">
+                  <p className="mb-2 text-xs text-slate-500">Section gap: <strong>{layoutSectionGap}</strong></p>
+                  <div style={{ display: "grid", gap: layoutSectionGap }}>
+                    {["Section A", "Section B"].map((label) => (
+                      <div
+                        key={label}
+                        className="py-2 text-center text-xs font-medium"
+                        style={{ background: "#e0f2fe", borderRadius: radiusPanel, color: "#0369a1" }}
+                      >
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card gutter demo */}
+                <div>
+                  <p className="mb-2 text-xs text-slate-500">Card gap: <strong>{layoutCardGutter}</strong></p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: layoutCardGutter }}>
+                    {["Card 1", "Card 2", "Card 3"].map((label) => (
+                      <div
+                        key={label}
+                        className="py-2 text-center text-xs font-medium"
+                        style={{ background: "#f3e8ff", borderRadius: radiusPanel, color: "#7c3aed" }}
+                      >
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
           </main>
         </div>
       </div>
