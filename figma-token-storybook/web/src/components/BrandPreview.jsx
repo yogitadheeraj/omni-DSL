@@ -317,14 +317,9 @@ export function BrandPreview() {
                   className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-white cursor-pointer transition-all"
                   style={{ background: previewPrimary }}
                 >
-                  Fetch Figma Pages
+                   {loading ? "Fetching..." : "Fetch Figma Pages"}
                 </button>
-                <button
-                  type="button"
-                  className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"
-                >
-                  Run Enterprise Sync
-                </button>
+               
                 <label className="flex items-center gap-2 text-xs text-slate-600">
                   <input
                     type="checkbox"
