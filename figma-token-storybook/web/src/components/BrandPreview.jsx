@@ -1,5 +1,36 @@
 import React, { useMemo, useState } from "react";
-import { Palette as Figma, Layers, Palette, RefreshCw, Tablet, Type } from "lucide-react";
+import {
+  Palette as Figma,
+  Layers,
+  Palette,
+  RefreshCw,
+  Tablet,
+  Type,
+  Search,
+  Book,
+  Home,
+  Settings,
+  Bell,
+  User,
+  Heart,
+  Lock,
+  Share2,
+  Download,
+  Upload,
+  Trash2,
+  Edit,
+  Plus,
+  Minus,
+  Check,
+  X,
+  ChevronRight,
+  Menu,
+  Calendar,
+  Clock,
+  AlertCircle,
+  Info,
+  HelpCircle
+} from "lucide-react";
 import { useTokens } from "../theme/TokenProvider";
 
 function isColorToken(type, value) {
@@ -98,14 +129,7 @@ function HeroSection({ layoutSectionPadding, layoutPagePadding, previewPrimary }
         A comprehensive, accessible, and well-crafted design system built on research-backed principles.
         Consistent, clear, mindful, and compliant with enterprise standards.
       </p>
-      <div className="flex gap-3 justify-center flex-wrap">
-        <button className="px-6 py-3 text-sm font-semibold rounded-lg text-white transition-all" style={{ background: previewPrimary }}>
-          Get Started
-        </button>
-        <button className="px-6 py-3 text-sm font-semibold rounded-lg border transition-all" style={{ borderColor: previewPrimary, color: previewPrimary }}>
-          View Documentation
-        </button>
-      </div>
+     
     </section>
   );
 }
@@ -400,6 +424,597 @@ function MetricsSection({ layoutSectionPadding, layoutCardGutter, radiusSection,
           );
         })}
       </div>
+    </section>
+  );
+}
+
+function IconShowcase({ layoutSectionPadding, layoutGridGutter, radiusPanel, previewPrimary, tokenEntries }) {
+  const iconLibrary = [
+    { name: "Search", Icon: Search },
+    { name: "Book", Icon: Book },
+    { name: "Home", Icon: Home },
+    { name: "Settings", Icon: Settings },
+    { name: "Bell", Icon: Bell },
+    { name: "User", Icon: User },
+    { name: "Heart", Icon: Heart },
+    { name: "Lock", Icon: Lock },
+    { name: "Share", Icon: Share2 },
+    { name: "Download", Icon: Download },
+    { name: "Upload", Icon: Upload },
+    { name: "Trash", Icon: Trash2 },
+    { name: "Edit", Icon: Edit },
+    { name: "Plus", Icon: Plus },
+    { name: "Minus", Icon: Minus },
+    { name: "Check", Icon: Check },
+    { name: "Close", Icon: X },
+    { name: "Chevron", Icon: ChevronRight },
+    { name: "Menu", Icon: Menu },
+    { name: "Calendar", Icon: Calendar },
+    { name: "Clock", Icon: Clock },
+    { name: "Alert", Icon: AlertCircle },
+    { name: "Info", Icon: Info },
+    { name: "Help", Icon: HelpCircle }
+  ];
+
+  // Extract all size.icons.* tokens from tokenEntries
+  const iconSizeTokens = useMemo(() => {
+    const sizes = {};
+    tokenEntries.forEach((token) => {
+      if (/^size\.icons/i.test(token.name)) {
+        const value = token.resolvedValue || token.value;
+        const sizeValue = String(value).replace(/[^0-9]/g, "");
+        const numSize = parseInt(sizeValue) || 24;
+        sizes[token.name] = {
+          tokenName: token.name,
+          displayName: token.name.replace(/^size\.icons\.?/, "").toUpperCase() || "DEFAULT",
+          size: numSize,
+          value: value
+        };
+      }
+    });
+    return Object.entries(sizes)
+      .map(([, v]) => v)
+      .sort((a, b) => a.size - b.size);
+  }, [tokenEntries]);
+
+  return (
+    <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Icon Library</h2>
+        <p className="text-slate-600">All icon sizes available from tokens</p>
+      </div>
+
+      {iconSizeTokens.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+          No size.icons tokens found. Add icon size tokens to your design system.
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {iconSizeTokens.map((sizeData) => (
+            <div key={sizeData.tokenName}>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">{sizeData.displayName}</h3>
+                <p className="text-xs text-slate-500 font-mono">{sizeData.tokenName} = {sizeData.value}</p>
+              </div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${sizeData.size + 40}px, 1fr))`, gap: layoutGridGutter }}>
+                {iconLibrary.map((item) => {
+                  const Icon = item.Icon;
+                  return (
+                    <div
+                      key={`${sizeData.tokenName}-${item.name}`}
+                      className="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all group cursor-pointer"
+                      style={{ borderRadius: radiusPanel }}
+                    >
+                      <div
+                        className="flex items-center justify-center rounded-lg mb-2 group-hover:bg-slate-100 transition-colors"
+                        style={{ color: previewPrimary, padding: "8px" }}
+                      >
+                        <Icon size={sizeData.size} strokeWidth={1.5} />
+                      </div>
+                      <p className="text-xs text-slate-600 text-center font-medium">{item.name}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActionsAndInputSection({ layoutSectionPadding, layoutGridGutter, layoutCardGutter, radiusSection, radiusPanel, previewPrimary, previewInverse, tokenEntries }) {
+  const sortSizeVariants = (variants) => {
+    const sizeOrder = { xs: 1, sm: 2, md: 3, lg: 4, xl: 5, xxl: 6 };
+    return variants.sort((a, b) => (sizeOrder[a.size] || 999) - (sizeOrder[b.size] || 999));
+  };
+
+  const buttonVariants = useMemo(() => {
+    const buttons = {};
+
+    tokenEntries.forEach((token) => {
+      const buttonMatch = token.name.match(/^typography\.button\.([a-z]+)-([a-z]+)\.([a-z]+(?:-[a-z]+)*)$/i);
+      if (!buttonMatch) return;
+
+      const sizeKey = buttonMatch[1].toLowerCase();
+      const weightKey = buttonMatch[2].toLowerCase();
+      const property = buttonMatch[3].toLowerCase();
+      const variantKey = `${sizeKey}-${weightKey}`;
+
+      if (!buttons[variantKey]) {
+        buttons[variantKey] = { size: sizeKey, weight: weightKey, properties: {} };
+      }
+
+      buttons[variantKey].properties[property] = {
+        name: token.name,
+        value: token.resolvedValue || token.value,
+        type: token.type
+      };
+    });
+
+    return Object.values(buttons)
+      .filter((btn) => Object.keys(btn.properties).length > 0)
+      .sort((a, b) => {
+        const sizeOrder = { xs: 1, sm: 2, md: 3, lg: 4, xl: 5 };
+        const weightOrder = { regular: 1, medium: 2, semibold: 3, bold: 4 };
+        const sizeCompare = (sizeOrder[a.size] || 999) - (sizeOrder[b.size] || 999);
+
+        if (sizeCompare !== 0) return sizeCompare;
+        return (weightOrder[a.weight] || 999) - (weightOrder[b.weight] || 999);
+      });
+  }, [tokenEntries]);
+
+  const inputVariants = useMemo(() => {
+    const inputs = {};
+
+    tokenEntries.forEach((token) => {
+      const inputMatch = token.name.match(/^(typography\.)?input\.([a-z]+)(?:\.(.*?))?$/i);
+      if (!inputMatch) return;
+
+      const sizeKey = inputMatch[2].toLowerCase();
+      const property = inputMatch[3] ? inputMatch[3].toLowerCase() : "size";
+
+      if (!inputs[sizeKey]) {
+        inputs[sizeKey] = { size: sizeKey, properties: {} };
+      }
+
+      inputs[sizeKey].properties[property] = {
+        name: token.name,
+        value: token.resolvedValue || token.value,
+        type: token.type
+      };
+    });
+
+    return sortSizeVariants(Object.values(inputs).filter((inp) => Object.keys(inp.properties).length > 0));
+  }, [tokenEntries]);
+
+  const labelVariants = useMemo(() => {
+    const labels = {};
+
+    tokenEntries.forEach((token) => {
+      const labelMatch = token.name.match(/^(typography\.)?label\.([a-z0-9-]+)(?:\.(.*?))?$/i);
+      if (!labelMatch) return;
+
+      const sizeKey = labelMatch[2].toLowerCase();
+      const property = labelMatch[3] ? labelMatch[3].toLowerCase() : "size";
+
+      if (!labels[sizeKey]) {
+        labels[sizeKey] = { size: sizeKey, properties: {} };
+      }
+
+      labels[sizeKey].properties[property] = {
+        name: token.name,
+        value: token.resolvedValue || token.value,
+        type: token.type
+      };
+    });
+
+    return sortSizeVariants(Object.values(labels).filter((label) => Object.keys(label.properties).length > 0));
+  }, [tokenEntries]);
+
+  const subtitleVariants = useMemo(() => {
+    const subtitles = {};
+
+    tokenEntries.forEach((token) => {
+      const subtitleMatch = token.name.match(/^(typography\.)?subtitle\.([a-z0-9-]+)(?:\.(.*?))?$/i);
+      if (!subtitleMatch) return;
+
+      const sizeKey = subtitleMatch[2].toLowerCase();
+      const property = subtitleMatch[3] ? subtitleMatch[3].toLowerCase() : "size";
+
+      if (!subtitles[sizeKey]) {
+        subtitles[sizeKey] = { size: sizeKey, properties: {} };
+      }
+
+      subtitles[sizeKey].properties[property] = {
+        name: token.name,
+        value: token.resolvedValue || token.value,
+        type: token.type
+      };
+    });
+
+    return sortSizeVariants(Object.values(subtitles).filter((subtitle) => Object.keys(subtitle.properties).length > 0));
+  }, [tokenEntries]);
+
+  const extractNumericValue = (str) => {
+    const match = String(str ?? "").match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : null;
+  };
+
+  const getInputPadding = (padding) => {
+    if (!padding) return "10px 14px";
+    const parts = String(padding).trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0]} ${parts[1]}`;
+    return padding;
+  };
+
+  const getTextSpecStyles = (variant) => ({
+    fontSize: variant.properties.size?.value || "14px",
+    fontFamily: variant.properties.family?.value || "inherit",
+    fontWeight: variant.properties.weight?.value || "400",
+    lineHeight: variant.properties.lineheight?.value || "1.4",
+    letterSpacing: variant.properties.letterspacing?.value || "0px",
+    borderRadius: variant.properties.radius?.value || "10px",
+    padding: variant.properties.padding?.value || "10px 14px",
+    width: variant.properties.width?.value || "auto"
+  });
+
+  const buttonShowcaseVariant = buttonVariants[0] || null;
+  const buttonShowcaseStyles = buttonShowcaseVariant
+    ? {
+        fontSize: buttonShowcaseVariant.properties.size?.value || "16px",
+        fontFamily: buttonShowcaseVariant.properties.family?.value || "inherit",
+        fontWeight: buttonShowcaseVariant.properties.weight?.value || (buttonShowcaseVariant.weight === "bold" ? "700" : "400"),
+        lineHeight: buttonShowcaseVariant.properties.lineheight?.value || "1.4",
+        letterSpacing: buttonShowcaseVariant.properties.letterspacing?.value || "0px",
+        borderRadius: buttonShowcaseVariant.properties.radius?.value || "10px",
+        padding: buttonShowcaseVariant.properties.padding?.value || "12px 18px"
+      }
+    : {
+        fontSize: "16px",
+        fontFamily: "inherit",
+        fontWeight: "600",
+        lineHeight: "1.4",
+        letterSpacing: "0px",
+        borderRadius: "10px",
+        padding: "12px 18px"
+      };
+
+  return (
+    <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+    
+      {buttonVariants.length === 0 && inputVariants.length === 0 && labelVariants.length === 0 && subtitleVariants.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+          No button, input, label, or subtitle tokens found. Add typography tokens to your design system.
+        </div>
+      ) : (
+        <div className="space-y-12">
+          {buttonVariants.length > 0 && (
+            <div className="rounded-xl bg-white" style={{ borderRadius: radiusSection }}>
+              <div className="border-t border-slate-200 px-6 py-6" style={{ paddingLeft: layoutSectionPadding, paddingRight: layoutSectionPadding }}>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h4 className="text-2xl font-bold text-slate-900">Button token specs</h4>
+                  <p className="text-sm text-slate-500">Using tokens matching typography.button.size-weight.property</p>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3" style={{ gap: layoutGridGutter }}>
+                  {buttonVariants.map((variant) => {
+                    const fontSize = extractNumericValue(variant.properties.size?.value);
+                    const fontFamily = variant.properties.family?.value || "inherit";
+                    const borderRadius = variant.properties.radius?.value || "10px";
+                    const padding = variant.properties.padding?.value || "12px 18px";
+                    const lineHeight = variant.properties.lineheight?.value || "1.4";
+                    const letterSpacing = variant.properties.letterspacing?.value || "0px";
+                    const fontWeight = variant.properties.weight?.value || (variant.weight === "bold" ? "700" : "400");
+
+                    return (
+                      <div key={`button-spec-${variant.size}-${variant.weight}`} className="rounded-lg border border-slate-200 bg-white p-5" style={{ borderRadius: radiusPanel }}>
+                        <div className="mb-4">
+                          <h5 className="text-lg font-semibold capitalize text-slate-900">{variant.size} {variant.weight}</h5>
+                          <p className="mt-1 text-xs text-slate-500">Primary, hover and disabled previews using token typography values.</p>
+                        </div>
+
+                        <div className="mb-5 flex flex-wrap gap-3">
+                          <button
+                            className="inline-flex items-center gap-2"
+                            style={{
+                              background: previewPrimary,
+                              color: previewInverse,
+                              fontSize: fontSize ? `${fontSize}px` : "14px",
+                              fontFamily,
+                              fontWeight,
+                              lineHeight,
+                              letterSpacing,
+                              borderRadius,
+                              padding
+                            }}
+                          >
+                            <span>Default</span>
+                          </button>
+                          <button
+                            className="inline-flex items-center gap-2 opacity-90"
+                            style={{
+                              background: previewPrimary,
+                              color: previewInverse,
+                              filter: "brightness(0.92)",
+                              fontSize: fontSize ? `${fontSize}px` : "14px",
+                              fontFamily,
+                              fontWeight,
+                              lineHeight,
+                              letterSpacing,
+                              borderRadius,
+                              padding
+                            }}
+                          >
+                            <span>Hover</span>
+                          </button>
+                          <button
+                            disabled
+                            className="inline-flex items-center gap-2 cursor-not-allowed opacity-60"
+                            style={{
+                              background: "#cbd5e1",
+                              color: "#475569",
+                              fontSize: fontSize ? `${fontSize}px` : "14px",
+                              fontFamily,
+                              fontWeight,
+                              lineHeight,
+                              letterSpacing,
+                              borderRadius,
+                              padding
+                            }}
+                          >
+                            <span>Disabled</span>
+                          </button>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50">
+                                <th className="px-3 py-2 text-left font-semibold text-slate-700">Property</th>
+                                <th className="px-3 py-2 text-left font-semibold text-slate-700">Token</th>
+                                <th className="px-3 py-2 text-left font-semibold text-slate-700">Value</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(variant.properties).map(([key, prop]) => (
+                                <tr key={key} className="border-b border-slate-100">
+                                  <td className="px-3 py-2 font-medium capitalize text-slate-700">{key}</td>
+                                  <td className="px-3 py-2 font-mono text-slate-500">{prop.name}</td>
+                                  <td className="px-3 py-2 font-mono text-slate-900">{prop.value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {inputVariants.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6" style={{ borderRadius: radiusSection }}>
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-slate-900">Inputs</h3>
+                <p className="mt-2 text-slate-600">Input tokens remain available below with state previews and property tables.</p>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2" style={{ gap: layoutGridGutter }}>
+                {inputVariants.map((variant) => {
+                  const fontSize = extractNumericValue(variant.properties.size?.value);
+                  const fontFamily = variant.properties.family?.value || "inherit";
+                  const borderRadius = variant.properties.radius?.value || "10px";
+                  const padding = getInputPadding(variant.properties.padding?.value);
+                  const fontWeight = variant.properties.weight?.value || "400";
+
+                  return (
+                    <div key={variant.size} className="rounded-lg border border-slate-200 bg-slate-50 p-5" style={{ borderRadius: radiusPanel }}>
+                      <div className="mb-4">
+                        <h4 className="text-lg font-semibold uppercase tracking-wide text-slate-900">{variant.size} input</h4>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {Object.entries(variant.properties)
+                            .slice(0, 4)
+                            .map(([key, prop]) => `${key}: ${prop.value}`)
+                            .join(" • ")}
+                        </p>
+                      </div>
+
+                      <div className="mb-5 space-y-3">
+                        <input
+                          type="text"
+                          placeholder="Default input"
+                          className="w-full border border-slate-300 bg-white outline-none transition-all"
+                          style={{
+                            fontSize: fontSize ? `${fontSize}px` : "14px",
+                            fontFamily,
+                            fontWeight,
+                            borderRadius,
+                            padding
+                          }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Focused input"
+                          className="w-full border-2 bg-white outline-none"
+                          style={{
+                            fontSize: fontSize ? `${fontSize}px` : "14px",
+                            fontFamily,
+                            fontWeight,
+                            borderRadius,
+                            padding,
+                            borderColor: previewPrimary,
+                            boxShadow: `0 0 0 3px ${previewPrimary}20`
+                          }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Disabled input"
+                          disabled
+                          className="w-full cursor-not-allowed border border-slate-200 bg-slate-100 opacity-70 outline-none"
+                          style={{
+                            fontSize: fontSize ? `${fontSize}px` : "14px",
+                            fontFamily,
+                            fontWeight,
+                            borderRadius,
+                            padding
+                          }}
+                        />
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-white">
+                              <th className="px-3 py-2 text-left font-semibold text-slate-700">Property</th>
+                              <th className="px-3 py-2 text-left font-semibold text-slate-700">Token</th>
+                              <th className="px-3 py-2 text-left font-semibold text-slate-700">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(variant.properties).map(([key, prop]) => (
+                              <tr key={key} className="border-b border-slate-100">
+                                <td className="px-3 py-2 font-medium capitalize text-slate-700">{key}</td>
+                                <td className="px-3 py-2 font-mono text-slate-500">{prop.name}</td>
+                                <td className="px-3 py-2 font-mono text-slate-900">{prop.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(labelVariants.length > 0 || subtitleVariants.length > 0) && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6" style={{ borderRadius: radiusSection }}>
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-slate-900">Label & Subtitle</h3>
+                <p className="mt-2 text-slate-600">Typography previews for all available label and subtitle sizes in the selected brand.</p>
+              </div>
+
+              {labelVariants.length > 0 && (
+                <div className="mb-10">
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <h4 className="text-xl font-semibold text-slate-900">Labels</h4>
+                    <p className="text-sm text-slate-500">Tokens matching typography.label.*</p>
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3" style={{ gap: layoutGridGutter }}>
+                    {labelVariants.map((variant) => {
+                      const textStyles = getTextSpecStyles(variant);
+
+                      return (
+                        <div key={`label-${variant.size}`} className="rounded-lg border border-slate-200 bg-slate-50 p-5" style={{ borderRadius: radiusPanel }}>
+                          <div className="mb-4">
+                            <h5 className="text-lg font-semibold uppercase tracking-wide text-slate-900">{variant.size} label</h5>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {Object.entries(variant.properties)
+                                .slice(0, 5)
+                                .map(([key, prop]) => `${key}: ${prop.value}`)
+                                .join(" • ")}
+                            </p>
+                          </div>
+
+                          <div className="mb-5 space-y-3">
+                            <div className="rounded-md border border-slate-200 bg-white" style={{ borderRadius: textStyles.borderRadius, padding: textStyles.padding, width: textStyles.width }}>
+                              <div className="text-slate-500" style={textStyles}>Form label</div>
+                            </div>
+                            <div className="rounded-md border border-slate-200 bg-white" style={{ borderRadius: textStyles.borderRadius, padding: textStyles.padding, width: textStyles.width }}>
+                              <div className="text-slate-500" style={{ ...textStyles, fontWeight: "400" }}>Regular label</div>
+                              <div className="mt-2 text-slate-900" style={{ ...textStyles, fontWeight: "700" }}>Bold label</div>
+                            </div>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-slate-200 bg-white">
+                                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Property</th>
+                                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Token</th>
+                                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Value</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Object.entries(variant.properties).map(([key, prop]) => (
+                                  <tr key={key} className="border-b border-slate-100">
+                                    <td className="px-3 py-2 font-medium capitalize text-slate-700">{key}</td>
+                                    <td className="px-3 py-2 font-mono text-slate-500">{prop.name}</td>
+                                    <td className="px-3 py-2 font-mono text-slate-900">{prop.value}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {subtitleVariants.length > 0 && (
+                <div>
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <h4 className="text-xl font-semibold text-slate-900">Subtitles</h4>
+                    <p className="text-sm text-slate-500">Tokens matching typography.subtitle.*</p>
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3" style={{ gap: layoutGridGutter }}>
+                    {subtitleVariants.map((variant) => {
+                      const textStyles = getTextSpecStyles(variant);
+
+                      return (
+                        <div key={`subtitle-${variant.size}`} className="rounded-lg border border-slate-200 bg-slate-50 p-5" style={{ borderRadius: radiusPanel }}>
+                          <div className="mb-4">
+                            <h5 className="text-lg font-semibold uppercase tracking-wide text-slate-900">{variant.size} subtitle</h5>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {Object.entries(variant.properties)
+                                .slice(0, 5)
+                                .map(([key, prop]) => `${key}: ${prop.value}`)
+                                .join(" • ")}
+                            </p>
+                          </div>
+
+                          <div className="mb-5 rounded-md border border-slate-200 bg-white" style={{ borderRadius: textStyles.borderRadius, padding: textStyles.padding, width: textStyles.width }}>
+                            <p className="text-slate-900" style={textStyles}>Subtitle copy for sections and supporting content</p>
+                            <p className="mt-2 text-slate-500" style={{ ...textStyles, fontWeight: "400" }}>Regular</p>
+                            <p className="mt-1 text-slate-700" style={{ ...textStyles, fontWeight: "700" }}>Bold</p>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-slate-200 bg-white">
+                                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Property</th>
+                                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Token</th>
+                                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Value</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Object.entries(variant.properties).map(([key, prop]) => (
+                                  <tr key={key} className="border-b border-slate-100">
+                                    <td className="px-3 py-2 font-medium capitalize text-slate-700">{key}</td>
+                                    <td className="px-3 py-2 font-mono text-slate-500">{prop.name}</td>
+                                    <td className="px-3 py-2 font-mono text-slate-900">{prop.value}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -1001,13 +1616,7 @@ export function BrandPreview() {
           previewPrimary={previewPrimary}
         />
 
-        <QuickNavSection
-          layoutSectionPadding={layoutSectionPadding}
-          layoutGridGutter={layoutGridGutter}
-          radiusSection={radiusSection}
-          navCards={navCards}
-          previewPrimary={previewPrimary}
-        />
+      
 
         <FundamentalsSection
           layoutSectionPadding={layoutSectionPadding}
@@ -1040,13 +1649,26 @@ export function BrandPreview() {
           previewPrimary={previewPrimary}
         />
 
-        <UpdatesSection
+        <IconShowcase
           layoutSectionPadding={layoutSectionPadding}
           layoutGridGutter={layoutGridGutter}
-          radiusSection={radiusSection}
-          announcements={announcements}
+          radiusPanel={radiusPanel}
           previewPrimary={previewPrimary}
+          tokenEntries={tokenEntries}
         />
+
+        <ActionsAndInputSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutGridGutter={layoutGridGutter}
+          layoutCardGutter={layoutCardGutter}
+          radiusSection={radiusSection}
+          radiusPanel={radiusPanel}
+          previewPrimary={previewPrimary}
+          previewInverse={previewInverse}
+          tokenEntries={tokenEntries}
+        />
+
+       
 
         <PrinciplesSection
           layoutSectionPadding={layoutSectionPadding}
