@@ -23,6 +23,460 @@ function toNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function findTokenEntry(tokenEntries, exactNames = [], regex = null) {
+  for (const name of exactNames) {
+    const exact = tokenEntries.find((token) => token.name === name);
+    if (exact) return exact;
+  }
+
+  if (regex) {
+    const matched = tokenEntries.find((token) => regex.test(token.name.toLowerCase()));
+    if (matched) return matched;
+  }
+
+  return null;
+}
+
+function TopNav({
+  layoutContainerMaxWidth,
+  previewPrimary,
+  isTestButtonHovered,
+  buttonHoverBg,
+  buttonBaseBg,
+  buttonHoverText,
+  buttonBaseText,
+  buttonHoverBorder,
+  buttonBaseBorder,
+  setIsTestButtonHovered,
+  syncTokens,
+  forceRefresh,
+  loading
+}) {
+  return (
+    <nav className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-40">
+      <div className="mx-auto flex items-center justify-between px-6 py-4" style={{ maxWidth: layoutContainerMaxWidth }}>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold text-white" style={{ background: previewPrimary }}>
+            O
+          </span>
+          <div>
+            <h1 className="text-lg font-bold text-slate-900">Omni DSL</h1>
+            <p className="text-xs text-slate-500">Design System Language</p>
+          </div>
+        </div>
+        <button
+          onClick={() => syncTokens(forceRefresh)}
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all"
+          style={{
+            background: isTestButtonHovered ? buttonHoverBg : buttonBaseBg,
+            color: isTestButtonHovered ? buttonHoverText : buttonBaseText,
+            border: `1px solid ${isTestButtonHovered ? buttonHoverBorder : buttonBaseBorder}`
+          }}
+          onMouseEnter={() => setIsTestButtonHovered(true)}
+          onMouseLeave={() => setIsTestButtonHovered(false)}
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          {loading ? "Syncing..." : "Sync"}
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+function HeroSection({ layoutSectionPadding, layoutPagePadding, previewPrimary }) {
+  return (
+    <section
+      className="py-16 text-center"
+      style={{
+        borderBottom: "1px solid #e2e8f0",
+        padding: `${layoutSectionPadding} ${layoutPagePadding}`
+      }}
+    >
+      <h1 className="text-5xl font-bold text-slate-900 mb-3">Full-featured design system</h1>
+      <p className="text-xl text-slate-600 mb-8">Everything you need to design at scale</p>
+      <p className="text-sm text-slate-500 mb-6 max-w-2xl mx-auto">
+        A comprehensive, accessible, and well-crafted design system built on research-backed principles.
+        Consistent, clear, mindful, and compliant with enterprise standards.
+      </p>
+      <div className="flex gap-3 justify-center flex-wrap">
+        <button className="px-6 py-3 text-sm font-semibold rounded-lg text-white transition-all" style={{ background: previewPrimary }}>
+          Get Started
+        </button>
+        <button className="px-6 py-3 text-sm font-semibold rounded-lg border transition-all" style={{ borderColor: previewPrimary, color: previewPrimary }}>
+          View Documentation
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function QuickNavSection({ layoutSectionPadding, layoutGridGutter, radiusSection, navCards, previewPrimary }) {
+  return (
+    <section style={{ padding: layoutSectionPadding }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style={{ gap: layoutGridGutter }}>
+        {navCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.title}
+              className="p-6 rounded-lg border border-slate-200 bg-white hover:shadow-lg transition-all cursor-pointer group"
+              style={{ borderRadius: radiusSection }}
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <span
+                  className="h-10 w-10 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform"
+                  style={{ background: previewPrimary }}
+                >
+                  <Icon size={20} />
+                </span>
+                <h3 className="font-semibold text-slate-900">{card.title}</h3>
+              </div>
+              <p className="text-sm text-slate-600">{card.desc}</p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function FundamentalsSection({
+  layoutSectionPadding,
+  layoutGridGutter,
+  layoutCardGutter,
+  radiusSection,
+  radiusPanel,
+  activeTheme,
+  selectedFundamental,
+  setSelectedFundamental,
+  fundamentalMenu,
+  fundamentalGroups,
+  selectedFundamentalTokens,
+  headingGuidelines,
+  typographyProfile,
+  previewPrimary,
+  previewInverse,
+  activeBrandName
+}) {
+  const activeSectionLabel = fundamentalMenu.find((item) => item.key === selectedFundamental)?.label || "Guidelines";
+  const sortedTokens = [...selectedFundamentalTokens].sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #d4d4d8", background: "#f3f4f6" }}>
+      <div className="mb-3">
+        <h2 className="text-2xl font-bold text-slate-900">Design Tokens</h2>
+        <p className="text-sm text-slate-600">Specification pattern view for the selected brand, aligned to token documentation style.</p>
+      </div>
+
+      {!activeTheme ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+          Select a brand from Admin Connection below to view brand-wise token guidelines.
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-[240px_1fr]" style={{ gap: layoutGridGutter }}>
+          <aside className="rounded-lg border border-slate-300 bg-white p-3" style={{ borderRadius: radiusSection }}>
+            <div className="mb-3 rounded bg-black px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Fundamentals Menu</div>
+            <div className="grid gap-2">
+              {fundamentalMenu.map((item) => {
+                const active = selectedFundamental === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setSelectedFundamental(item.key)}
+                    className="flex items-center justify-between rounded border px-2.5 py-2 text-left text-xs font-medium transition-all"
+                    style={{
+                      background: active ? "#0f172a" : "#f8fafc",
+                      color: active ? "#ffffff" : "#0f172a",
+                      borderColor: active ? "#0f172a" : "#d4d4d8"
+                    }}
+                  >
+                    <span>{item.label}</span>
+                    <span className="text-xs opacity-80">{item.count ?? 0}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          <article className="rounded-lg border border-slate-300 bg-white" style={{ borderRadius: radiusSection }}>
+            <div className="rounded-t-lg bg-black px-4 py-3 text-white" style={{ borderTopLeftRadius: radiusSection, borderTopRightRadius: radiusSection }}>
+              <p className="text-[11px] uppercase tracking-[0.15em] opacity-80">Design Tokens Spec</p>
+              <div className="mt-1 flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{activeSectionLabel}</h3>
+                <span className="rounded border border-white/30 px-2 py-0.5 text-[11px]">{activeBrandName}</span>
+              </div>
+            </div>
+
+            <div className="px-4 py-3" style={{ display: "grid", gap: layoutCardGutter }}>
+              <div className="grid md:grid-cols-2 gap-2">
+                <div className="rounded border border-slate-200 bg-slate-50 p-2">
+                  <p className="text-[10px] uppercase text-slate-500">Token Count</p>
+                  <p className="text-sm font-semibold text-slate-900">{selectedFundamentalTokens.length}</p>
+                </div>
+                <div className="rounded border border-slate-200 bg-slate-50 p-2">
+                  <p className="text-[10px] uppercase text-slate-500">Font Base</p>
+                  <p className="text-xs font-mono text-slate-900 truncate">{typographyProfile.fontFamilyBase}</p>
+                </div>
+              
+              </div>
+
+              {selectedFundamental === "headings" && (
+                <div>
+                  <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Headings Guideline</div>
+                  <div className="overflow-x-auto rounded border border-slate-200">
+                    <table className="w-full border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-left uppercase tracking-wider text-slate-500">
+                          <th className="border-b border-slate-200 px-3 py-2">Heading</th>
+                          <th className="border-b border-slate-200 px-3 py-2">Class</th>
+                          <th className="border-b border-slate-200 px-3 py-2">Token</th>
+                          <th className="border-b border-slate-200 px-3 py-2">Properties</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {headingGuidelines.map((row) => (
+                          <tr key={row.label}>
+                            <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-700">{row.label}</td>
+                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-rose-700">{row.className}</td>
+                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-500">{row.tokenName || "(fallback)"}</td>
+                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-emerald-800">font-size:{row.value};</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Token Table</div>
+                <div className="overflow-x-auto rounded border border-slate-200">
+                  <table className="w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-left uppercase tracking-wider text-slate-500">
+                        <th className="border-b border-slate-200 px-3 py-2">Token</th>
+                        <th className="border-b border-slate-200 px-3 py-2">Value</th>
+                        <th className="border-b border-slate-200 px-3 py-2">Type</th>
+                        <th className="border-b border-slate-200 px-3 py-2">Collection</th>
+                        <th className="border-b border-slate-200 px-3 py-2">Preview</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedTokens.map((token) => {
+                        const tokenValue = token.resolvedValue || token.value || "-";
+                        const isColorLike = /^(#|rgb\(|hsl\()/i.test(String(tokenValue));
+                        return (
+                          <tr key={token.name}>
+                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-700">{token.name}</td>
+                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-900">{tokenValue}</td>
+                            <td className="border-b border-slate-100 px-3 py-2 text-slate-500">{token.type}</td>
+                            <td className="border-b border-slate-100 px-3 py-2 text-slate-500">{token.collection || "-"}</td>
+                            <td className="border-b border-slate-100 px-3 py-2">
+                              {isColorLike ? (
+                                <span className="inline-flex h-5 w-10 rounded border border-slate-300" style={{ background: tokenValue }} />
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MetricsSection({ layoutSectionPadding, layoutCardGutter, radiusSection, metricCards, previewPrimary }) {
+  return (
+    <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+      <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">System Overview</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" style={{ gap: layoutCardGutter }}>
+        {metricCards.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div key={metric.label} className="p-6 rounded-lg bg-white border border-slate-200 text-center" style={{ borderRadius: radiusSection }}>
+              <div className="flex justify-center mb-3">
+                <span className="h-12 w-12 rounded-lg flex items-center justify-center text-white" style={{ background: previewPrimary }}>
+                  <Icon size={24} />
+                </span>
+              </div>
+              <p className="text-4xl font-bold text-slate-900 mb-1">{metric.value}</p>
+              <p className="text-sm text-slate-600">{metric.label}</p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function UpdatesSection({ layoutSectionPadding, layoutGridGutter, radiusSection, announcements, previewPrimary }) {
+  return (
+    <section style={{ padding: layoutSectionPadding }}>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Latest Updates</h2>
+        <p className="text-slate-600">Stay informed about the latest developments and opportunities</p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ gap: layoutGridGutter }}>
+        {announcements.map((ann, idx) => (
+          <div
+            key={idx}
+            className="p-6 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer group"
+            style={{ borderRadius: radiusSection }}
+          >
+            <div className="mb-4">
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white" style={{ background: previewPrimary }}>
+                {ann.category}
+              </span>
+              <p className="text-xs text-slate-500 mt-2">{ann.date}</p>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">{ann.title}</h3>
+            <ul className="space-y-2">
+              {ann.highlights.map((h, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="h-1 w-1 rounded-full" style={{ background: previewPrimary }} />
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PrinciplesSection({ layoutSectionPadding, layoutGridGutter, radiusSection, principles, previewPrimary }) {
+  return (
+    <section
+      style={{
+        padding: layoutSectionPadding,
+        borderTop: "1px solid #e2e8f0",
+        borderBottom: "1px solid #e2e8f0",
+        background: "#f8fafc"
+      }}
+    >
+      <div className="mb-8 text-center">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Design Principles</h2>
+        <p className="text-slate-600">Crafted based on research by users, for users</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ gap: layoutGridGutter }}>
+        {principles.map((p, idx) => (
+          <div key={idx} className="p-6 rounded-lg bg-white border border-slate-200 text-center" style={{ borderRadius: radiusSection }}>
+            <div className="text-4xl mb-3 font-bold" style={{ color: previewPrimary }}>{p.icon}</div>
+            <h3 className="font-semibold text-slate-900 mb-2 text-lg">{p.title}</h3>
+            <p className="text-sm text-slate-600">{p.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ResourcesSection({ layoutSectionPadding, layoutCardGutter }) {
+  return (
+    <section style={{ padding: layoutSectionPadding }}>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Resources & Tools</h2>
+        <p className="text-slate-600">Everything you need to get started</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ gap: layoutCardGutter }}>
+        <div className="p-6 rounded-lg border border-slate-200 bg-white text-center hover:shadow-lg transition-all">
+          <p className="text-3xl mb-2">📚</p>
+          <h3 className="font-semibold text-slate-900 mb-2">Guidelines</h3>
+          <p className="text-sm text-slate-600 mb-4">Comprehensive design and usage guidelines</p>
+          <button className="text-sm font-semibold text-blue-600 hover:underline">Learn more →</button>
+        </div>
+        <div className="p-6 rounded-lg border border-slate-200 bg-white text-center hover:shadow-lg transition-all">
+          <p className="text-3xl mb-2">🎨</p>
+          <h3 className="font-semibold text-slate-900 mb-2">Assets & Templates</h3>
+          <p className="text-sm text-slate-600 mb-4">Download design files and components</p>
+          <button className="text-sm font-semibold text-blue-600 hover:underline">Download →</button>
+        </div>
+        <div className="p-6 rounded-lg border border-slate-200 bg-white text-center hover:shadow-lg transition-all">
+          <p className="text-3xl mb-2">🚀</p>
+          <h3 className="font-semibold text-slate-900 mb-2">Get Started</h3>
+          <p className="text-sm text-slate-600 mb-4">Installation and setup instructions</p>
+          <button className="text-sm font-semibold text-blue-600 hover:underline">Install now →</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AdminFooterSection({
+  layoutSectionPadding,
+  fileKey,
+  setFileKey,
+  activeTheme,
+  setActiveTheme,
+  themes,
+  data,
+  forceRefresh,
+  setForceRefresh
+}) {
+  return (
+    <footer
+      style={{
+        borderTop: "1px solid #e2e8f0",
+        padding: layoutSectionPadding,
+        background: "#f8fafc"
+      }}
+    >
+      <div className="grid lg:grid-cols-[1fr_auto] gap-8">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">Admin Connection</h3>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                value={fileKey}
+                onChange={(e) => setFileKey(e.target.value)}
+                placeholder="Figma File Key"
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-xs outline-none focus:border-slate-400"
+              />
+              <select
+                value={activeTheme}
+                onChange={(e) => setActiveTheme(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-slate-200 text-xs outline-none focus:border-slate-400"
+              >
+                <option value="">Brand</option>
+                {themes.map((theme) => (
+                  <option key={theme} value={theme}>{data?.brands?.[theme]?.name ?? theme}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 text-xs">
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={forceRefresh}
+                  onChange={(e) => setForceRefresh(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                Force refresh
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-right text-xs text-slate-500">
+          <p className="mb-1"><strong>Source:</strong> {data?.source ?? "-"}</p>
+          <p className="mb-1"><strong>Cache:</strong> {data?.cache?.hit ? "hit" : "miss"}</p>
+          <p><strong>Themes:</strong> {data?.omniDsl?.themeCount ?? 0}</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export function BrandPreview() {
   const {
     fileKey,
@@ -39,6 +493,7 @@ export function BrandPreview() {
   const [previewMode, setPreviewMode] = useState("desktop");
   const [previewModeOverridden, setPreviewModeOverridden] = useState(false);
   const [selectedGutterToken, setSelectedGutterToken] = useState(null); // name of selected gutter token
+  const [selectedFundamental, setSelectedFundamental] = useState("typography");
 
   const themes = Object.keys(data?.brands ?? {});
   console.log("Available themes:", themes, activeTheme, data?.brands?.[activeTheme]);
@@ -50,8 +505,99 @@ export function BrandPreview() {
     type: token?.type ?? "UNKNOWN",
     isColor: isColorToken(token?.type, token?.resolvedValue ?? token?.value)
   })), [activeTokens]);
-
+console.log("Token entries:", tokenEntries, activeTokens);
   const colorTokens = useMemo(() => tokenEntries.filter((token) => token.isColor).slice(0, 5), [tokenEntries]);
+
+  const baseFundamentalMenu = [
+    { key: "typography", label: "Typography" },
+    { key: "color", label: "Color" },
+    { key: "spacing", label: "Spacing" },
+    { key: "radius", label: "Radius" },
+    { key: "headings", label: "Headings" }
+  ];
+
+  const fundamentalGroups = useMemo(() => {
+    const byName = (regex) => tokenEntries.filter((token) => regex.test(token.name.toLowerCase()));
+
+    const typography = byName(/(^font\.|typography|text\.(size|weight|line-height|letter-spacing)|line-height|letter-spacing)/);
+    const color = tokenEntries.filter((token) => token.isColor || /(^color\.|\.color\.|text\.inverse|text\.default)/.test(token.name.toLowerCase()));
+    const spacing = byName(/(spacing|padding|margin|gap|gutter|inset|space)/);
+    const radius = byName(/(radius|rounded|border-radius)/);
+    const headings = byName(/(display|heading|text\.h[1-6]|typography\.h[1-6]|^h[1-6]\.)/);
+
+    return {
+      typography,
+      color,
+      spacing,
+      radius,
+      headings
+    };
+  }, [tokenEntries]);
+
+  const collectionTokenGroups = useMemo(() => {
+    const grouped = {};
+    tokenEntries.forEach((token) => {
+      const collectionName = token.collection || "unassigned";
+      if (!grouped[collectionName]) grouped[collectionName] = [];
+      grouped[collectionName].push(token);
+    });
+    return grouped;
+  }, [tokenEntries]);
+
+  const collectionMenuItems = useMemo(() => {
+    const apiCollectionNames = (data?.collections ?? []).map((collection) => collection.name);
+    const tokenCollectionNames = Object.keys(collectionTokenGroups);
+    const uniqueNames = [...new Set([...apiCollectionNames, ...tokenCollectionNames])];
+
+    return uniqueNames.map((name) => ({
+      key: `collection:${name}`,
+      label: `Collection / ${name}`,
+      count: collectionTokenGroups[name]?.length ?? 0
+    }));
+  }, [data, collectionTokenGroups]);
+
+  const fundamentalMenu = useMemo(() => {
+    const base = baseFundamentalMenu.map((item) => ({
+      ...item,
+      count: (fundamentalGroups[item.key] ?? []).length
+    }));
+    return [...base, ...collectionMenuItems];
+  }, [fundamentalGroups, collectionMenuItems]);
+
+  const headingGuidelines = useMemo(() => {
+    const def = [
+      { id: "display", label: "H1 DISPLAY", className: "text-display", fallback: "4.75rem", exact: ["text.display", "typography.display.size", "font.size.display"], rx: /(text\.display|typography\.display|font\.size\.display)/ },
+      { id: "h1", label: "H1", className: "text-h1", fallback: "3.875rem", exact: ["text.h1", "typography.h1.size", "font.size.h1"], rx: /(text\.h1|typography\.h1|font\.size\.h1)/ },
+      { id: "h2", label: "H2", className: "text-h2", fallback: "3rem", exact: ["text.h2", "typography.h2.size", "font.size.h2"], rx: /(text\.h2|typography\.h2|font\.size\.h2)/ },
+      { id: "h3", label: "H3", className: "text-h3", fallback: "2.5rem", exact: ["text.h3", "typography.h3.size", "font.size.h3"], rx: /(text\.h3|typography\.h3|font\.size\.h3)/ },
+      { id: "h4", label: "H4", className: "text-h4", fallback: "2rem", exact: ["text.h4", "typography.h4.size", "font.size.h4"], rx: /(text\.h4|typography\.h4|font\.size\.h4)/ },
+      { id: "h5", label: "H5", className: "text-h5", fallback: "1.625rem", exact: ["text.h5", "typography.h5.size", "font.size.h5"], rx: /(text\.h5|typography\.h5|font\.size\.h5)/ },
+      { id: "h6", label: "H6", className: "text-h6", fallback: "1.25rem", exact: ["text.h6", "typography.h6.size", "font.size.h6"], rx: /(text\.h6|typography\.h6|font\.size\.h6)/ }
+    ];
+
+    return def.map((row) => {
+      const token = findTokenEntry(tokenEntries, row.exact, row.rx);
+      return {
+        label: row.label,
+        className: row.className,
+        tokenName: token?.name ?? "",
+        value: token?.resolvedValue || token?.value || row.fallback
+      };
+    });
+  }, [tokenEntries]);
+
+  const typographyProfile = {
+    fontFamilyBase: firstTokenValue(activeTokens, ["font.family.base", "font.family.primary", "typography.font.family.base", "typography.family"], "Inter"),
+    fontFamilyHeading: firstTokenValue(activeTokens, ["font.family.heading", "typography.heading.font.family", "font.family.base", "typography.family"], "Inter"),
+   };
+
+  const selectedFundamentalTokens = useMemo(() => {
+    if (selectedFundamental.startsWith("collection:")) {
+      const collectionName = selectedFundamental.replace("collection:", "");
+      return collectionTokenGroups[collectionName] ?? [];
+    }
+    return fundamentalGroups[selectedFundamental] ?? [];
+  }, [selectedFundamental, fundamentalGroups, collectionTokenGroups]);
 
   const summary = useMemo(() => {
     const colorCount = tokenEntries.filter((token) => token.isColor).length;
@@ -244,532 +790,145 @@ export function BrandPreview() {
   }
 
   const metricCards = [
-    { label: "Figma Pages", value: summary.pages, icon: Figma },
     { label: "Components", value: summary.components, icon: Layers },
     { label: "Brands", value: summary.brands, icon: Palette },
-    { label: "Patterns", value: summary.patterns, icon: Type }
+    { label: "Patterns", value: summary.patterns, icon: Type },
+    { label: "Color Tokens", value: tokenEntries.filter((t) => t.isColor).length, icon: Figma }
+  ];
+
+  const navCards = [
+    { title: "Components", icon: Layers, desc: "Accessible, well-crafted components for your web project" },
+    { title: "Blocks", icon: Palette, desc: "Reusable block patterns and compositions" },
+    { title: "Patterns", icon: Type, desc: "Design patterns and best practices" },
+    { title: "Guidelines", icon: Figma, desc: "Design system documentation and usage" },
+    { title: "Resources", icon: Layers, desc: "Assets, tools, and templates" },
+    { title: "Documentation", icon: Type, desc: "Getting started and API reference" }
+  ];
+
+  const principles = [
+    { title: "Consistent", icon: "✓", desc: "Guidelines, applications and components follow a consistent format" },
+    { title: "Clear", icon: "→", desc: "Clear purpose and unified message for component usage" },
+    { title: "Mindful", icon: "◆", desc: "Designed with current and future needs in mind" },
+    { title: "Compliant", icon: "✔", desc: "Easily adapted while maintaining unification best practices" }
+  ];
+
+  const announcements = [
+    {
+      title: "Major Release: Version 3.0",
+      category: "New Release",
+      date: "Nov 11, 2025",
+      highlights: [
+        "Official package release",
+        "TailwindCSS 4.x compatibility",
+        "Component UI upgrades",
+        "Enhanced hover effects"
+      ]
+    },
+    {
+      title: "Design System Excellence Program",
+      category: "Program",
+      date: "Ongoing",
+      highlights: [
+        "Official expert certification",
+        "Private & Government pathways",
+        "Community recognition",
+        "Implementation support"
+      ]
+    }
   ];
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb]" style={{ fontFamily: previewFont, padding: layoutPagePadding }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: previewFont }}>
+      <TopNav
+        layoutContainerMaxWidth={layoutContainerMaxWidth}
+        previewPrimary={previewPrimary}
+        isTestButtonHovered={isTestButtonHovered}
+        buttonHoverBg={buttonHoverBg}
+        buttonBaseBg={buttonBaseBg}
+        buttonHoverText={buttonHoverText}
+        buttonBaseText={buttonBaseText}
+        buttonHoverBorder={buttonHoverBorder}
+        buttonBaseBorder={buttonBaseBorder}
+        setIsTestButtonHovered={setIsTestButtonHovered}
+        syncTokens={syncTokens}
+        forceRefresh={forceRefresh}
+        loading={loading}
+      />
+
       <div className="mx-auto" style={{ maxWidth: layoutContainerMaxWidth }}>
-        <header
-          className="mb-5 flex items-center justify-between border border-slate-200 bg-white shadow-sm"
-          style={{
-            borderRadius: radiusHeader,
-            padding: `${layoutHeaderPaddingY} ${layoutHeaderPaddingX}`
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-              <Figma size={18} />
-            </span>
-            <div>
-              <h1 className="text-xl font-semibold text-slate-900">Brand Storybook Portal</h1>
-              <p className="text-xs text-slate-500">Live Figma sync + multi-brand React design system</p>
-            </div>
-          </div>
-          <button
-            onClick={() => syncTokens(forceRefresh)}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all"
-            style={{
-              background: isTestButtonHovered ? buttonHoverBg : buttonBaseBg,
-              color: isTestButtonHovered ? buttonHoverText : buttonBaseText,
-              border: `1px solid ${isTestButtonHovered ? buttonHoverBorder : buttonBaseBorder}`,
-              borderRadius: isTestButtonHovered ? buttonHoverRadius : buttonBaseRadius
-            }}
-            onMouseEnter={() => setIsTestButtonHovered(true)}
-            onMouseLeave={() => setIsTestButtonHovered(false)}
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            {loading ? "Syncing..." : "Sync Figma"}
-          </button>
-        </header>
+        <HeroSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutPagePadding={layoutPagePadding}
+          previewPrimary={previewPrimary}
+        />
 
-        <div className="grid lg:grid-cols-[auto_1fr]" style={{ gap: layoutGridGutter }}>
-          <aside style={{ display: "grid", gap: layoutSectionGap, width: layoutSidebarWidth, maxWidth: "100%" }}>
-            <section
-              className="border border-slate-200 bg-white shadow-sm"
-              style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
-            >
-              <h2 className="mb-3 text-sm font-semibold text-slate-900">Figma Connection</h2>
-              <div style={{ display: "grid", gap: layoutCardGutter }}>
-                <div>
-                  <p className="mb-1 text-xs font-medium text-slate-500">Figma File Key</p>
-                  <input
-                    value={fileKey}
-                    onChange={(e) => setFileKey(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
-                  />
-                </div>
-                <div>
-                  <p className="mb-1 text-xs font-medium text-slate-500">Figma Token</p>
-                  <input
-                    type="password"
-                    value={figmaToken}
-                    onChange={(e) => setFigmaToken(e.target.value)}
-                    placeholder="************************"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
-                  />
-                </div>
-                <button
-                  onClick={() => syncTokens(forceRefresh)}
-                  className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-white cursor-pointer transition-all"
-                  style={{ background: previewPrimary }}
-                >
-                   {loading ? "Fetching..." : "Fetch Figma Pages"}
-                </button>
-               
-                <label className="flex items-center gap-2 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={forceRefresh}
-                    onChange={(e) => setForceRefresh(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  Force refresh cache
-                </label>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                  Recommended: keep token on backend only.
-                </div>
-              </div>
-               <h3 className="mb-3 mt-2 text-sm font-semibold text-slate-900">Brand</h3>
-              <select
-                value={activeTheme}
-                onChange={(e) => setActiveTheme(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
-              >
-                <option value="">Select brand</option>
-                {themes.map((theme) => (
-                  <option key={theme} value={theme}>{data?.brands?.[theme]?.name ?? theme}</option>
-                ))}
-              </select>
-                 <h2 className="mb-3  mt-2 text-sm font-semibold text-slate-900">Preview</h2>
-              <div style={{ display: "grid", gap: layoutCardGutter }}>
-                {tokenPreviewMode && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                    Token default: <span className="font-semibold" style={{ color: previewPrimary }}>{tokenPreviewMode}</span>
-                  </div>
-                )}
-                {gutterTokenEntries.length > 0 && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 inline-flex flex-col gap-2">
-                    Detected gutter tokens:
-                      {gutterTokenEntries.map((token) => (
-             
-                             <button
-                  type="button"
-                  onClick={() => handleSetPreviewMode("desktop")}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
-                  style={{ background: effectivePreviewMode === "desktop" ? previewPrimary : "#f1f5f9", color: effectivePreviewMode === "desktop" ? previewInverse : "#0f172a" }}
-                >
-                  <Layers size={14} />  ({token.breakpoint})
-                </button>
-                         
-                      ))}
-                  
-                  </div>
-                )}
-              
-              </div>
-            </section>
+        <QuickNavSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutGridGutter={layoutGridGutter}
+          radiusSection={radiusSection}
+          navCards={navCards}
+          previewPrimary={previewPrimary}
+        />
 
-           
-           
-          </aside>
+        <FundamentalsSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutGridGutter={layoutGridGutter}
+          layoutCardGutter={layoutCardGutter}
+          radiusSection={radiusSection}
+          radiusPanel={radiusPanel}
+          activeTheme={activeTheme}
+          selectedFundamental={selectedFundamental}
+          setSelectedFundamental={setSelectedFundamental}
+          fundamentalMenu={fundamentalMenu}
+          fundamentalGroups={fundamentalGroups}
+          selectedFundamentalTokens={selectedFundamentalTokens}
+          headingGuidelines={headingGuidelines}
+          typographyProfile={typographyProfile}
+          previewPrimary={previewPrimary}
+          previewInverse={previewInverse}
+          activeBrandName={activeBrandName}
+        />
 
-          <main style={{ display: "grid", gap: layoutSectionGap }}>
-            <section
-              className="grid"
-              style={{
-                gap: layoutCardGutter,
-                gridTemplateColumns: `repeat(${effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet}, minmax(4, 1fr))`
-              }}
-            >
-              {metricCards.map((metric) => {
-                const Icon = metric.icon;
-                return (
-                  <article
-                    key={metric.label}
-                    className="border border-slate-200 bg-white shadow-sm"
-                    style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
-                  >
-                    <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white">
-                      <Icon size={15} />
-                    </span>
-                    <p className="text-3xl font-bold text-slate-900">{metric.value}</p>
-                    <p className="text-sm text-slate-500">{metric.label}</p>
-                  </article>
-                );
-              })}
-            </section>
+        <MetricsSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutCardGutter={layoutCardGutter}
+          radiusSection={radiusSection}
+          metricCards={metricCards}
+          previewPrimary={previewPrimary}
+        />
 
-            <section
-              className="border border-slate-200 bg-white shadow-sm"
-              style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-900">Live Figma Pages</h2>
-                  <p className="text-sm text-slate-500">Fetch page-wise nodes and convert them into Storybook review items.</p>
-                </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">No Data Yet</span>
-              </div>
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                No pages loaded yet. Enter file key and click Fetch Figma Pages.
-              </div>
-            </section>
+        <UpdatesSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutGridGutter={layoutGridGutter}
+          radiusSection={radiusSection}
+          announcements={announcements}
+          previewPrimary={previewPrimary}
+        />
 
-            <section
-              className="grid gap-4 lg:grid-cols-[var(--layout-preview-left)_var(--layout-preview-right)]"
-              style={{
-                gap: layoutGridGutter,
-                "--layout-preview-left": previewSplitLeft,
-                "--layout-preview-right": previewSplitRight
-              }}
-            >
-              <article
-                className="border border-slate-200 bg-white shadow-sm"
-                style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-2xl font-semibold text-slate-900">Storybook Page Preview</h3>
-                    <p className="text-sm text-slate-500">Selected Figma page rendered as business review preview.</p>
-                  </div>
-                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">Default / {effectivePreviewMode}</span>
-                </div>
+        <PrinciplesSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutGridGutter={layoutGridGutter}
+          radiusSection={radiusSection}
+          principles={principles}
+          previewPrimary={previewPrimary}
+        />
 
-                <div className="bg-slate-100" style={{ borderRadius: radiusPanel, padding: layoutCanvasPadding }}>
-                  <div
-                    className="mx-auto max-w-md text-white"
-                    style={{
-                      background: `linear-gradient(145deg, ${previewPrimary}, #0f172a)`,
-                      borderRadius: radiusPanel,
-                      padding: layoutCanvasPadding
-                    }}
-                  >
-                    <p className="text-sm opacity-80">Figma Page</p>
-                    <h4 className="mt-2 text-lg font-semibold">Business Review</h4>
-                    <p className="mt-2 text-sm opacity-90">
-                      This section represents a live Storybook preview generated from Figma metadata and mapped React components.
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-4 text-sm font-semibold transition-all"
-                      style={{
-                        background: isTestButtonHovered ? buttonHoverBg : buttonBaseBg,
-                        color: isTestButtonHovered ? buttonHoverText : buttonBaseText,
-                        borderRadius: isTestButtonHovered ? buttonHoverRadius : buttonBaseRadius,
-                        padding: `${buttonPaddingY} ${buttonPaddingX}`,
-                        border: `1px solid ${isTestButtonHovered ? buttonHoverBorder : buttonBaseBorder}`
-                      }}
-                      onMouseEnter={() => setIsTestButtonHovered(true)}
-                      onMouseLeave={() => setIsTestButtonHovered(false)}
-                    >
-                      Review Action
-                    </button>
-                  </div>
-                </div>
-              </article>
+        <ResourcesSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutCardGutter={layoutCardGutter}
+        />
 
-              <article
-                className="border border-slate-200 bg-white shadow-sm"
-                style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
-              >
-                <h3 className="text-2xl font-semibold text-slate-900">Design Tokens</h3>
-                <p className="mb-4 text-sm text-slate-500">Synced from Figma variables and applied per selected brand mode.</p>
-                <div style={{ display: "grid", gap: layoutCardGutter }}>
-                  <div className="border border-slate-200 bg-slate-50 text-xs text-slate-600" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
-                    Active Brand: <span className="font-semibold">{activeBrandName}</span><br />
-                    Source: {data?.source ?? "-"} | Cache: {data?.cache?.hit ? "hit" : "miss"} | Omni DSL themes: {data?.omniDsl?.themeCount ?? 0}
-                  </div>
-                  <div className="border border-slate-200 bg-slate-50" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
-                    <p className="text-xs text-slate-500">Semantic / Primary</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-900">{previewPrimary}</span>
-                      <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewPrimary }} />
-                    </div>
-                  </div>
-                  <div className="border border-slate-200 bg-slate-50" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
-                    <p className="text-xs text-slate-500">Semantic / Secondary</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-900">{previewSecondary}</span>
-                      <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewSecondary }} />
-                    </div>
-                  </div>
-                  <div className="border border-slate-200 bg-slate-50" style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}>
-                    <p className="text-xs text-slate-500">Text / Default</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-900">{previewText}</span>
-                      <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: previewText }} />
-                    </div>
-                  </div>
-
-                  {colorTokens.map((token) => (
-                    <div
-                      key={token.name}
-                      className="border border-slate-200 bg-white"
-                      style={{ borderRadius: radiusPanel, padding: layoutPanelPadding }}
-                    >
-                      <p className="text-xs text-slate-500">{token.name}</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-900">{token.resolvedValue}</span>
-                        <span className="h-7 w-7 rounded-lg border border-slate-300" style={{ background: token.resolvedValue }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
-
-            {/* Grid & Gutter Visual Preview */}
-            <section
-              className="border border-slate-200 bg-white shadow-sm"
-              style={{ borderRadius: radiusSection, padding: layoutSectionPadding }}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-slate-900">Grid &amp; Gutter Preview</h2>
-                  <p className="text-sm text-slate-500">Live layout token values visualised as measurement guides.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {tokenPreviewMode ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-                      <span className="h-2 w-2 rounded-full" style={{ background: previewPrimary }} />
-                      Token: {tokenPreviewMode}
-                    </span>
-                  ) : (
-                    <span className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs text-slate-400">No mode token</span>
-                  )}
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: previewPrimary }}>
-                    Active: {effectivePreviewMode}
-                  </span>
-                </div>
-              </div>
-              <div
-                className="mb-4 flex items-center gap-3 rounded-lg text-xs"
-                style={{ padding: layoutPanelPadding, background: tokenPreviewMode ? "#f0fdf4" : "#fafafa", border: tokenPreviewMode ? "1px solid #bbf7d0" : "1px solid #e2e8f0" }}
-              >
-                <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: tokenPreviewMode ? "#16a34a" : "#94a3b8" }} />
-                <div className="flex-1">
-                  <span className="font-semibold text-slate-700">layout.preview.mode</span>
-                  <span className="mx-2 text-slate-400">→</span>
-                  <span className="font-mono" style={{ color: tokenPreviewMode ? "#15803d" : "#64748b" }}>
-                    {tokenPreviewMode || "(not set — UI default used)"}
-                  </span>
-                  {previewModeOverridden && <span className="ml-3 text-amber-600">(manually overridden)</span>}
-                </div>
-                {previewModeOverridden && (
-                  <button type="button" onClick={() => setPreviewModeOverridden(false)} className="text-xs text-slate-500 underline hover:text-slate-800">
-                    Reset to token
-                  </button>
-                )}
-              </div>
-
-              {/* Gutter type selector — all layout.grid.gutter variants */}
-              {gutterTokenEntries.length > 0 && (
-                <div className="mb-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                    Grid Gutter Types ({gutterTokenEntries.length} found)
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedGutterToken(null)}
-                      className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all"
-                      style={{
-                        background: selectedGutterToken === null ? previewPrimary : "#f1f5f9",
-                        color: selectedGutterToken === null ? previewInverse : "#0f172a",
-                        borderColor: selectedGutterToken === null ? previewPrimary : "#e2e8f0",
-                      }}
-                    >
-                      Default ({layoutGridGutter})
-                    </button>
-                    {gutterTokenEntries.map((entry) => (
-                      <button
-                        key={entry.name}
-                        type="button"
-                        onClick={() => setSelectedGutterToken(entry.name)}
-                        className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all"
-                        style={{
-                          background: selectedGutterToken === entry.name ? previewPrimary : "#f1f5f9",
-                          color: selectedGutterToken === entry.name ? previewInverse : "#0f172a",
-                          borderColor: selectedGutterToken === entry.name ? previewPrimary : "#e2e8f0",
-                        }}
-                      >
-                        <span className="font-mono">{entry.label}</span>
-                        <span className="ml-1.5 opacity-70">{entry.value}</span>
-                        {entry.breakpoint && (
-                          <span
-                            className="ml-1.5 rounded px-1 text-[10px] font-bold uppercase"
-                            style={{ background: previewPrimary, opacity: 0.8, color: previewInverse }}
-                          >
-                            {entry.breakpoint}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedGutterToken && (() => {
-                    const sel = gutterTokenEntries.find((e) => e.name === selectedGutterToken);
-                    return sel ? (
-                      <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                        <span className="font-semibold">{sel.name}</span>
-                        <span className="mx-2 text-slate-400">→</span>
-                        <span className="font-mono font-semibold" style={{ color: previewPrimary }}>{sel.value}</span>
-                        <span className="ml-2 text-slate-400">({sel.type})</span>
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-
-              {/* Token value rows */}
-              {[
-                { label: "layout.grid.gutter", token: "Grid Gutter", value: layoutGridGutter, color: previewPrimary },
-                { label: "layout.card.gap", token: "Card Gap", value: layoutCardGutter, color: "#6366f1" },
-                { label: "layout.section.gap", token: "Section Gap", value: layoutSectionGap, color: "#0ea5e9" },
-                { label: "layout.page.padding", token: "Page Padding", value: layoutPagePadding, color: "#10b981" },
-                { label: "layout.sidebar.width", token: "Sidebar Width", value: layoutSidebarWidth, color: "#f59e0b" },
-                { label: "layout.header.padding-x", token: "Header Pad X", value: layoutHeaderPaddingX, color: "#ec4899" },
-                { label: "layout.header.padding-y", token: "Header Pad Y", value: layoutHeaderPaddingY, color: "#8b5cf6" },
-                { label: "layout.section.padding", token: "Section Padding", value: layoutSectionPadding, color: "#14b8a6" },
-                { label: "layout.panel.padding", token: "Panel Padding", value: layoutPanelPadding, color: "#f97316" },
-                { label: "layout.canvas.padding", token: "Canvas Padding", value: layoutCanvasPadding, color: "#ef4444" },
-              ].map(({ label, token, value, color }) => {
-                const numericPx = Number.parseInt(String(value), 10) || 0;
-                const barMaxPx = 320;
-                const barWidthPct = Math.min((numericPx / barMaxPx) * 100, 100);
-                return (
-                  <div
-                    key={label}
-                    className="mb-3 last:mb-0"
-                    style={{ borderRadius: radiusPanel, padding: layoutPanelPadding, background: "#f8fafc", border: "1px solid #e2e8f0" }}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-semibold text-slate-700">{token}</span>
-                        <span className="ml-2 text-xs text-slate-400">{label}</span>
-                      </div>
-                      <span
-                        className="rounded px-2 py-0.5 text-xs font-bold text-white"
-                        style={{ background: color }}
-                      >
-                        {value}
-                      </span>
-                    </div>
-                    {/* Visual bar representing the pixel size */}
-                    <div className="relative h-4 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                        style={{ width: `${barWidthPct}%`, background: color, opacity: 0.85 }}
-                      />
-                      {/* Tick marks every 25% */}
-                      {[25, 50, 75].map((pct) => (
-                        <div
-                          key={pct}
-                          className="absolute inset-y-0 w-px bg-white/60"
-                          style={{ left: `${pct}%` }}
-                        />
-                      ))}
-                    </div>
-                    <p className="mt-1 text-right text-[10px] text-slate-400">{numericPx}px of {barMaxPx}px scale</p>
-                  </div>
-                );
-              })}
-
-              {/* Live grid simulation */}
-              <div className="mt-6">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Live Grid Simulation</p>
-
-                {/* Column gutter demo */}
-                <div className="mb-4">
-                  {(() => {
-                    const sel = gutterTokenEntries.find((e) => e.name === selectedGutterToken);
-                    const activeGutter = sel ? sel.value : layoutGridGutter;
-                    const activeGutterLabel = sel ? `${sel.label} (${activeGutter})` : `default (${activeGutter})`;
-                    return (
-                      <>
-                        <p className="mb-2 text-xs text-slate-500">
-                          Column gutter: <strong>{activeGutterLabel}</strong>
-                          {sel && <span className="ml-2 font-mono text-slate-400">{sel.name}</span>}
-                        </p>
-                        <div className="flex overflow-hidden rounded-lg" style={{ gap: activeGutter }}>
-                          {Array.from({ length: effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="flex-1 py-3 text-center text-xs font-medium text-white"
-                              style={{ background: previewPrimary, borderRadius: radiusPanel, opacity: 0.75 + i * 0.05 }}
-                            >
-                              Col {i + 1}
-                            </div>
-                          ))}
-                        </div>
-                        {/* Show all gutter variants as mini demos when no token selected */}
-                        {!selectedGutterToken && gutterTokenEntries.length > 1 && (
-                          <div className="mt-3 space-y-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">All gutter variants:</p>
-                            {gutterTokenEntries.map((entry) => (
-                              <div key={entry.name}>
-                                <p className="mb-1 text-[10px] text-slate-400">
-                                  <span className="font-mono">{entry.name}</span> → <strong>{entry.value}</strong>
-                                </p>
-                                <div className="flex overflow-hidden rounded" style={{ gap: entry.value }}>
-                                  {Array.from({ length: effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet }).map((_, i) => (
-                                    <div
-                                      key={i}
-                                      className="flex-1 py-2 text-center text-[10px] font-medium text-white"
-                                      style={{ background: previewPrimary, borderRadius: radiusPanel, opacity: 0.6 + i * 0.05 }}
-                                    >
-                                      {i + 1}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* Section gap demo */}
-                <div className="mb-2">
-                  <p className="mb-2 text-xs text-slate-500">Section gap: <strong>{layoutSectionGap}</strong></p>
-                  <div style={{ display: "grid", gap: layoutSectionGap }}>
-                    {["Section A", "Section B"].map((label) => (
-                      <div
-                        key={label}
-                        className="py-2 text-center text-xs font-medium"
-                        style={{ background: "#e0f2fe", borderRadius: radiusPanel, color: "#0369a1" }}
-                      >
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Card gutter demo */}
-                <div>
-                  <p className="mb-2 text-xs text-slate-500">Card gap: <strong>{layoutCardGutter}</strong></p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: layoutCardGutter }}>
-                    {["Card 1", "Card 2", "Card 3"].map((label) => (
-                      <div
-                        key={label}
-                        className="py-2 text-center text-xs font-medium"
-                        style={{ background: "#f3e8ff", borderRadius: radiusPanel, color: "#7c3aed" }}
-                      >
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-          </main>
-        </div>
+        <AdminFooterSection
+          layoutSectionPadding={layoutSectionPadding}
+          fileKey={fileKey}
+          setFileKey={setFileKey}
+          activeTheme={activeTheme}
+          setActiveTheme={setActiveTheme}
+          themes={themes}
+          data={data}
+          forceRefresh={forceRefresh}
+          setForceRefresh={setForceRefresh}
+        />
       </div>
     </div>
   );
