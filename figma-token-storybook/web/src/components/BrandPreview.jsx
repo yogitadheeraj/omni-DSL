@@ -152,6 +152,8 @@ function FundamentalsSection({
   fundamentalMenu,
   fundamentalGroups,
   selectedFundamentalTokens,
+  semanticGroupRows,
+  semanticGroupsJson,
   headingGuidelines,
   typographyProfile,
   previewPrimary,
@@ -160,6 +162,14 @@ function FundamentalsSection({
 }) {
   const activeSectionLabel = fundamentalMenu.find((item) => item.key === selectedFundamental)?.label || "Guidelines";
   const sortedTokens = [...selectedFundamentalTokens].sort((a, b) => a.name.localeCompare(b.name));
+  const [expandedGroups, setExpandedGroups] = useState({});
+
+  function toggleGroup(groupName) {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  }
 
   return (
     <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #d4d4d8", background: "#f3f4f6" }}>
@@ -221,71 +231,130 @@ function FundamentalsSection({
               
               </div>
 
-              {selectedFundamental === "headings" && (
-                <div>
-                  <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Headings Guideline</div>
-                  <div className="overflow-x-auto rounded border border-slate-200">
-                    <table className="w-full border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-100 text-left uppercase tracking-wider text-slate-500">
-                          <th className="border-b border-slate-200 px-3 py-2">Heading</th>
-                          <th className="border-b border-slate-200 px-3 py-2">Class</th>
-                          <th className="border-b border-slate-200 px-3 py-2">Token</th>
-                          <th className="border-b border-slate-200 px-3 py-2">Properties</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {headingGuidelines.map((row) => (
-                          <tr key={row.label}>
-                            <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-700">{row.label}</td>
-                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-rose-700">{row.className}</td>
-                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-500">{row.tokenName || "(fallback)"}</td>
-                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-emerald-800">font-size:{row.value};</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              {selectedFundamental === "semantic-json" ? (
+                <>
+                  <div>
+                    <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Business Group View</div>
+                    <div className="grid md:grid-cols-2" style={{ gap: layoutCardGutter }}>
+                      {semanticGroupRows.map((group) => (
+                        <div key={group.group} className="rounded border border-slate-200 bg-slate-50 p-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">{group.group}</p>
+                            <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">{group.count}</span>
+                          </div>
+                          {(() => {
+                            const isExpanded = Boolean(expandedGroups[group.group]);
+                            const visibleTokens = isExpanded ? group.tokens : group.tokens.slice(0, 8);
+                            return (
+                          <div className="space-y-1">
+                            {visibleTokens.map((token) => (
+                              <div key={token.name} className="flex items-center justify-between gap-2 text-[11px]">
+                                <span className="font-mono text-slate-600 truncate">{token.name}</span>
+                                <span className="font-mono text-slate-800">{token.resolvedValue || token.value || "-"}</span>
+                              </div>
+                            ))}
+                            {group.count > 8 && !isExpanded && (
+                              <button
+                                type="button"
+                                onClick={() => toggleGroup(group.group)}
+                                className="text-[10px] text-slate-500 underline hover:text-slate-800"
+                              >
+                                +{group.count - 8} more
+                              </button>
+                            )}
+                            {group.count > 8 && isExpanded && (
+                              <button
+                                type="button"
+                                onClick={() => toggleGroup(group.group)}
+                                className="text-[10px] text-slate-500 underline hover:text-slate-800"
+                              >
+                                Show less
+                              </button>
+                            )}
+                          </div>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
 
-              <div>
-                <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Token Table</div>
-                <div className="overflow-x-auto rounded border border-slate-200">
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 text-left uppercase tracking-wider text-slate-500">
-                        <th className="border-b border-slate-200 px-3 py-2">Token</th>
-                        <th className="border-b border-slate-200 px-3 py-2">Value</th>
-                        <th className="border-b border-slate-200 px-3 py-2">Type</th>
-                        <th className="border-b border-slate-200 px-3 py-2">Collection</th>
-                        <th className="border-b border-slate-200 px-3 py-2">Preview</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedTokens.map((token) => {
-                        const tokenValue = token.resolvedValue || token.value || "-";
-                        const isColorLike = /^(#|rgb\(|hsl\()/i.test(String(tokenValue));
-                        return (
-                          <tr key={token.name}>
-                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-700">{token.name}</td>
-                            <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-900">{tokenValue}</td>
-                            <td className="border-b border-slate-100 px-3 py-2 text-slate-500">{token.type}</td>
-                            <td className="border-b border-slate-100 px-3 py-2 text-slate-500">{token.collection || "-"}</td>
-                            <td className="border-b border-slate-100 px-3 py-2">
-                              {isColorLike ? (
-                                <span className="inline-flex h-5 w-10 rounded border border-slate-300" style={{ background: tokenValue }} />
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </td>
+                  <div>
+                    <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Semantic Groups JSON (Brand-wise)</div>
+                    <div className="overflow-auto rounded border border-slate-200 bg-slate-950 p-3" style={{ maxHeight: 360 }}>
+                      <pre className="text-[11px] leading-5 text-emerald-300">{JSON.stringify(semanticGroupsJson, null, 2)}</pre>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {selectedFundamental === "headings" && (
+                    <div>
+                      <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Headings Guideline</div>
+                      <div className="overflow-x-auto rounded border border-slate-200">
+                        <table className="w-full border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-100 text-left uppercase tracking-wider text-slate-500">
+                              <th className="border-b border-slate-200 px-3 py-2">Heading</th>
+                              <th className="border-b border-slate-200 px-3 py-2">Class</th>
+                              <th className="border-b border-slate-200 px-3 py-2">Token</th>
+                              <th className="border-b border-slate-200 px-3 py-2">Properties</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {headingGuidelines.map((row) => (
+                              <tr key={row.label}>
+                                <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-700">{row.label}</td>
+                                <td className="border-b border-slate-100 px-3 py-2 font-mono text-rose-700">{row.className}</td>
+                                <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-500">{row.tokenName || "(fallback)"}</td>
+                                <td className="border-b border-slate-100 px-3 py-2 font-mono text-emerald-800">font-size:{row.value};</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="mb-2 rounded bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white">Token Table</div>
+                    <div className="overflow-x-auto rounded border border-slate-200">
+                      <table className="w-full border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 text-left uppercase tracking-wider text-slate-500">
+                            <th className="border-b border-slate-200 px-3 py-2">Token</th>
+                            <th className="border-b border-slate-200 px-3 py-2">Value</th>
+                            <th className="border-b border-slate-200 px-3 py-2">Type</th>
+                            <th className="border-b border-slate-200 px-3 py-2">Collection</th>
+                            <th className="border-b border-slate-200 px-3 py-2">Preview</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                        </thead>
+                        <tbody>
+                          {sortedTokens.map((token) => {
+                            const tokenValue = token.resolvedValue || token.value || "-";
+                            const isColorLike = /^(#|rgb\(|hsl\()/i.test(String(tokenValue));
+                            return (
+                              <tr key={token.name}>
+                                <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-700">{token.name}</td>
+                                <td className="border-b border-slate-100 px-3 py-2 font-mono text-slate-900">{tokenValue}</td>
+                                <td className="border-b border-slate-100 px-3 py-2 text-slate-500">{token.type}</td>
+                                <td className="border-b border-slate-100 px-3 py-2 text-slate-500">{token.collection || "-"}</td>
+                                <td className="border-b border-slate-100 px-3 py-2">
+                                  {isColorLike ? (
+                                    <span className="inline-flex h-5 w-10 rounded border border-slate-300" style={{ background: tokenValue }} />
+                                  ) : (
+                                    <span className="text-slate-400">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </article>
         </div>
@@ -496,19 +565,21 @@ export function BrandPreview() {
   const [selectedFundamental, setSelectedFundamental] = useState("typography");
 
   const themes = Object.keys(data?.brands ?? {});
-  console.log("Available themes:", themes, activeTheme, data?.brands?.[activeTheme]);
   const activeTokens = data?.brands?.[activeTheme]?.tokens ?? {};
+  const activeBrandName = data?.brands?.[activeTheme]?.name ?? "No theme selected";
   const tokenEntries = useMemo(() => Object.entries(activeTokens).map(([name, token]) => ({
     name,
     value: token?.value ?? "",
     resolvedValue: token?.resolvedValue ?? token?.value ?? "",
     type: token?.type ?? "UNKNOWN",
+    collection: token?.collection ?? "unassigned",
     isColor: isColorToken(token?.type, token?.resolvedValue ?? token?.value)
   })), [activeTokens]);
-console.log("Token entries:", tokenEntries, activeTokens);
+
   const colorTokens = useMemo(() => tokenEntries.filter((token) => token.isColor).slice(0, 5), [tokenEntries]);
 
   const baseFundamentalMenu = [
+    { key: "semantic-json", label: "Semantic Groups JSON" },
     { key: "typography", label: "Typography" },
     { key: "color", label: "Color" },
     { key: "spacing", label: "Spacing" },
@@ -526,6 +597,7 @@ console.log("Token entries:", tokenEntries, activeTokens);
     const headings = byName(/(display|heading|text\.h[1-6]|typography\.h[1-6]|^h[1-6]\.)/);
 
     return {
+      "semantic-json": tokenEntries,
       typography,
       color,
       spacing,
@@ -533,6 +605,57 @@ console.log("Token entries:", tokenEntries, activeTokens);
       headings
     };
   }, [tokenEntries]);
+
+  const semanticGroupRows = useMemo(() => {
+    const buckets = {
+      "Brand Colors": [],
+      "Text & Content": [],
+      "Surfaces & Backgrounds": [],
+      "Borders & Strokes": [],
+      "Typography": [],
+      "Spacing & Layout": [],
+      "Radius & Shape": [],
+      "Component Tokens": [],
+      "Other": []
+    };
+
+    tokenEntries.forEach((token) => {
+      const n = token.name.toLowerCase();
+      if (/^color\.brand|^brand\./.test(n)) buckets["Brand Colors"].push(token);
+      else if (/text|content|label|typography\.content/.test(n)) buckets["Text & Content"].push(token);
+      else if (/surface|background|bg\b|canvas/.test(n)) buckets["Surfaces & Backgrounds"].push(token);
+      else if (/border|stroke|outline/.test(n)) buckets["Borders & Strokes"].push(token);
+      else if (/^font\.|typography|line-height|letter-spacing|text\.h[1-6]/.test(n)) buckets["Typography"].push(token);
+      else if (/spacing|padding|margin|gap|gutter|layout|grid|inset/.test(n)) buckets["Spacing & Layout"].push(token);
+      else if (/radius|rounded|corner/.test(n)) buckets["Radius & Shape"].push(token);
+      else if (/^(button|input|select|card|modal|tabs|checkbox|badge|alert|form)\./.test(n)) buckets["Component Tokens"].push(token);
+      else buckets["Other"].push(token);
+    });
+
+    return Object.entries(buckets)
+      .map(([group, tokens]) => ({ group, tokens, count: tokens.length }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [tokenEntries]);
+
+  const semanticGroupsJson = useMemo(() => {
+    const groups = {};
+    semanticGroupRows.forEach((row) => {
+      groups[row.group] = row.tokens.map((token) => ({
+        name: token.name,
+        value: token.resolvedValue || token.value || "",
+        type: token.type,
+        collection: token.collection || "unassigned"
+      }));
+    });
+
+    return {
+      brand: activeBrandName,
+      brandKey: activeTheme,
+      totalVariables: tokenEntries.length,
+      groups
+    };
+  }, [semanticGroupRows, activeBrandName, activeTheme, tokenEntries.length]);
 
   const collectionTokenGroups = useMemo(() => {
     const grouped = {};
@@ -609,7 +732,6 @@ console.log("Token entries:", tokenEntries, activeTokens);
     };
   }, [tokenEntries, themes.length]);
 
-  const activeBrandName = data?.brands?.[activeTheme]?.name ?? "No theme selected";
   const previewPrimary = firstTokenValue(activeTokens, ["color.brand.primary.base", "color.primary", "brand.primary"], "#111827");
   const previewSecondary = firstTokenValue(activeTokens, ["color.brand.secondary.base", "color.secondary", "brand.secondary"], "#e5e7eb");
   const previewInverse = firstTokenValue(activeTokens, ["color.text.inverse", "text.inverse"], "#ffffff");
@@ -882,6 +1004,8 @@ console.log("Token entries:", tokenEntries, activeTokens);
           fundamentalMenu={fundamentalMenu}
           fundamentalGroups={fundamentalGroups}
           selectedFundamentalTokens={selectedFundamentalTokens}
+          semanticGroupRows={semanticGroupRows}
+          semanticGroupsJson={semanticGroupsJson}
           headingGuidelines={headingGuidelines}
           typographyProfile={typographyProfile}
           previewPrimary={previewPrimary}
