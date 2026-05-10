@@ -382,7 +382,7 @@ export function BrandPreview() {
               className="grid"
               style={{
                 gap: layoutCardGutter,
-                gridTemplateColumns: `repeat(${effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet}, minmax(${metricColumnMinWidth}, 1fr))`
+                gridTemplateColumns: `repeat(${effectivePreviewMode === "desktop" ? metricColumnsDesktop : metricColumnsTablet}, minmax(4, 1fr))`
               }}
             >
               {metricCards.map((metric) => {
