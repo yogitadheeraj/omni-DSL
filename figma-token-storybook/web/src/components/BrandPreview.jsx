@@ -61,7 +61,7 @@ function TopNav({
           </span>
           <div>
             <h1 className="text-lg font-bold text-slate-900">Omni DSL</h1>
-            <p className="text-xs text-slate-500">Design System Language</p>
+            <p className="text-xs text-slate-500">Design System Library</p>
           </div>
         </div>
         <button
@@ -147,6 +147,8 @@ function FundamentalsSection({
   radiusSection,
   radiusPanel,
   activeTheme,
+  themes,
+  setActiveTheme,
   selectedFundamental,
   setSelectedFundamental,
   fundamentalMenu,
@@ -212,9 +214,24 @@ function FundamentalsSection({
           <article className="rounded-lg border border-slate-300 bg-white" style={{ borderRadius: radiusSection }}>
             <div className="rounded-t-lg bg-black px-4 py-3 text-white" style={{ borderTopLeftRadius: radiusSection, borderTopRightRadius: radiusSection }}>
               <p className="text-[11px] uppercase tracking-[0.15em] opacity-80">Design Tokens Spec</p>
-              <div className="mt-1 flex items-center justify-between">
+              <div className="mt-1 flex items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold">{activeSectionLabel}</h3>
-                <span className="rounded border border-white/30 px-2 py-0.5 text-[11px]">{activeBrandName}</span>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="design-token-brand" className="text-[11px] uppercase tracking-wider text-white/80">
+                    Brand
+                  </label>
+                  <select
+                    id="design-token-brand"
+                    value={activeTheme}
+                    onChange={(e) => setActiveTheme(e.target.value)}
+                    className="rounded border border-white/30 bg-slate-900 px-2 py-1 text-[11px] text-white outline-none"
+                  >
+                    <option value="">Select brand</option>
+                    {themes.map((theme) => (
+                      <option key={theme} value={theme}>{theme}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -999,6 +1016,8 @@ export function BrandPreview() {
           radiusSection={radiusSection}
           radiusPanel={radiusPanel}
           activeTheme={activeTheme}
+          themes={themes}
+          setActiveTheme={setActiveTheme}
           selectedFundamental={selectedFundamental}
           setSelectedFundamental={setSelectedFundamental}
           fundamentalMenu={fundamentalMenu}
