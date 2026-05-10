@@ -524,6 +524,181 @@ function IconShowcase({ layoutSectionPadding, layoutGridGutter, radiusPanel, pre
   );
 }
 
+function LayoutGridSection({ layoutSectionPadding, layoutGridGutter, radiusSection, radiusPanel, previewPrimary, tokenEntries }) {
+  const sortLayoutVariants = (variants) => {
+    const order = {
+      mobile: 1,
+      sm: 2,
+      tablet: 3,
+      md: 4,
+      lg: 5,
+      desktop: 6,
+      xl: 7,
+      "2xl": 8,
+      xxl: 9
+    };
+    return variants.sort((a, b) => (order[a.key] || 999) - (order[b.key] || 999));
+  };
+
+  const layoutGroups = useMemo(() => {
+    const collect = (pattern) => sortLayoutVariants(
+      tokenEntries
+        .filter((token) => pattern.test(token.name))
+        .map((token) => ({
+          key: token.name.split(".").pop().toLowerCase(),
+          name: token.name,
+          value: token.resolvedValue || token.value,
+          type: token.type
+        }))
+    );
+
+    return {
+      breakpoints: collect(/^layout\.breakpoint\./i),
+      columns: collect(/^layout\.grid\.columns\./i),
+      gutters: collect(/^layout\.grid\.gutter\./i)
+    };
+  }, [tokenEntries]);
+
+  const allGroupsEmpty = Object.values(layoutGroups).every((items) => items.length === 0);
+
+  const toCount = (value) => {
+    const parsed = Number.parseInt(String(value), 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const sectionGroups = [
+    {
+      title: "Breakpoints",
+      description: "All available layout.breakpoint.* tokens for the selected brand.",
+      items: layoutGroups.breakpoints,
+      renderPreview: (item) => {
+        const widthValue = String(item.value);
+        const barWidth = Math.min(Number.parseInt(widthValue, 10) / 14.4, 100);
+        return (
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-full bg-slate-200">
+              <div className="h-3 rounded-full" style={{ width: `${barWidth}%`, background: previewPrimary }} />
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span className="uppercase tracking-wide">{item.key}</span>
+              <span className="font-mono">{item.value}</span>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      title: "Grid Columns",
+      description: "Column counts from layout.grid.columns.* tokens.",
+      items: layoutGroups.columns,
+      renderPreview: (item) => {
+        const count = Math.min(toCount(item.value), 12);
+        return (
+          <div className="space-y-3">
+            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(count, 1)}, minmax(0, 1fr))` }}>
+              {Array.from({ length: Math.max(count, 1) }).map((_, index) => (
+                <div key={`${item.name}-${index}`} className="h-10 rounded-sm" style={{ background: `${previewPrimary}22`, border: `1px solid ${previewPrimary}55` }} />
+              ))}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span className="uppercase tracking-wide">{item.key}</span>
+              <span className="font-mono">{item.value}</span>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      title: "Grid Gutters",
+      description: "Spacing between columns from layout.grid.gutter.* tokens.",
+      items: layoutGroups.gutters,
+      renderPreview: (item) => {
+        const gapValue = String(item.value || "16px");
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2" style={{ gap: gapValue }}>
+              <div className="h-12 rounded-md" style={{ background: `${previewPrimary}22`, border: `1px solid ${previewPrimary}55` }} />
+              <div className="h-12 rounded-md" style={{ background: `${previewPrimary}22`, border: `1px solid ${previewPrimary}55` }} />
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span className="uppercase tracking-wide">{item.key}</span>
+              <span className="font-mono">{item.value}</span>
+            </div>
+          </div>
+        );
+      }
+    }
+  ];
+
+  return (
+    <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Grid & Columns</h2>
+        <p className="text-slate-600">Breakpoint, grid column, and gutter tokens available for the selected brand.</p>
+      </div>
+
+      {allGroupsEmpty ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+          No layout breakpoint, column, or gutter tokens found. Add layout grid tokens to your design system.
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {sectionGroups.map((group) => {
+            if (group.items.length === 0) return null;
+
+            return (
+              <div key={group.title} className="rounded-xl border border-slate-200 bg-white p-6" style={{ borderRadius: radiusSection }}>
+                <div className="mb-5">
+                  <h3 className="text-2xl font-bold text-slate-900">{group.title}</h3>
+                  <p className="mt-2 text-slate-600">{group.description}</p>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3" style={{ gap: layoutGridGutter }}>
+                  {group.items.map((item) => (
+                    <div key={item.name} className="rounded-lg border border-slate-200 bg-slate-50 p-5" style={{ borderRadius: radiusPanel }}>
+                      <div className="mb-4">
+                        <h4 className="text-lg font-semibold uppercase tracking-wide text-slate-900">{item.key}</h4>
+                        <p className="mt-1 text-xs font-mono text-slate-500">{item.name}</p>
+                      </div>
+
+                      <div className="mb-5">{group.renderPreview(item)}</div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-white">
+                              <th className="px-3 py-2 text-left font-semibold text-slate-700">Property</th>
+                              <th className="px-3 py-2 text-left font-semibold text-slate-700">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-slate-100">
+                              <td className="px-3 py-2 font-medium text-slate-700">Token</td>
+                              <td className="px-3 py-2 font-mono text-slate-900">{item.name}</td>
+                            </tr>
+                            <tr className="border-b border-slate-100">
+                              <td className="px-3 py-2 font-medium text-slate-700">Value</td>
+                              <td className="px-3 py-2 font-mono text-slate-900">{item.value}</td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 font-medium text-slate-700">Type</td>
+                              <td className="px-3 py-2 font-mono text-slate-900">{item.type}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ActionsAndInputSection({ layoutSectionPadding, layoutGridGutter, layoutCardGutter, radiusSection, radiusPanel, previewPrimary, previewInverse, tokenEntries }) {
   const sortSizeVariants = (variants) => {
     const sizeOrder = { xs: 1, sm: 2, md: 3, lg: 4, xl: 5, xxl: 6 };
@@ -1652,6 +1827,15 @@ export function BrandPreview() {
         <IconShowcase
           layoutSectionPadding={layoutSectionPadding}
           layoutGridGutter={layoutGridGutter}
+          radiusPanel={radiusPanel}
+          previewPrimary={previewPrimary}
+          tokenEntries={tokenEntries}
+        />
+
+        <LayoutGridSection
+          layoutSectionPadding={layoutSectionPadding}
+          layoutGridGutter={layoutGridGutter}
+          radiusSection={radiusSection}
           radiusPanel={radiusPanel}
           previewPrimary={previewPrimary}
           tokenEntries={tokenEntries}
