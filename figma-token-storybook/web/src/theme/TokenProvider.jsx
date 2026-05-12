@@ -3,6 +3,26 @@ import { applyTokensToRoot } from "./tokenUtils";
 
 const TokenContext = createContext(null);
 
+function normalizeThemeName(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function resolveDefaultThemeKey(brands = {}) {
+  const keys = Object.keys(brands);
+  if (keys.length === 0) return "";
+
+  const preferred = ["whitelabel"];
+  const preferredSet = new Set(preferred);
+
+  const keyMatch = keys.find((key) => preferredSet.has(normalizeThemeName(key)));
+  if (keyMatch) return keyMatch;
+
+  const nameMatch = keys.find((key) => preferredSet.has(normalizeThemeName(brands[key]?.name)));
+  if (nameMatch) return nameMatch;
+
+  return keys[0];
+}
+
 export function TokenProvider({ children }) {
   const [fileKey, setFileKey] = useState("YMHme3s5OVuqqrgT6qJxii");
   const [data, setData] = useState(null);
@@ -21,9 +41,12 @@ export function TokenProvider({ children }) {
       const json = await response.json();
       setData(json);
 
-      const firstTheme = Object.keys(json.brands ?? {})[0];
-      setActiveTheme(firstTheme);
-      applyTokensToRoot(json.brands[firstTheme].tokens);
+      const defaultTheme = resolveDefaultThemeKey(json.brands ?? {});
+      setActiveTheme(defaultTheme);
+
+      if (defaultTheme && json.brands?.[defaultTheme]?.tokens) {
+        applyTokensToRoot(json.brands[defaultTheme].tokens);
+      }
     } finally {
       setLoading(false);
     }

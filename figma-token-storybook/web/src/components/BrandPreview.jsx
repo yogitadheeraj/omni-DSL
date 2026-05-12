@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Palette as Figma,
   Layers,
@@ -66,6 +66,25 @@ function findTokenEntry(tokenEntries, exactNames = [], regex = null) {
   }
 
   return null;
+}
+
+function normalizeThemeName(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function resolveDefaultThemeKey(brands = {}) {
+  const keys = Object.keys(brands);
+  if (keys.length === 0) return "";
+
+  const preferred = new Set(["whitelabel"]);
+
+  const byKey = keys.find((key) => preferred.has(normalizeThemeName(key)));
+  if (byKey) return byKey;
+
+  const byName = keys.find((key) => preferred.has(normalizeThemeName(brands[key]?.name)));
+  if (byName) return byName;
+
+  return keys[0];
 }
 
 function TopNav({
@@ -1370,8 +1389,30 @@ export function BrandPreview() {
   const [previewModeOverridden, setPreviewModeOverridden] = useState(false);
   const [selectedGutterToken, setSelectedGutterToken] = useState(null); // name of selected gutter token
   const [selectedFundamental, setSelectedFundamental] = useState("typography");
+  const hasAutoSynced = useRef(false);
+
+  useEffect(() => {
+    if (hasAutoSynced.current) return;
+    if (!data && !loading) {
+      hasAutoSynced.current = true;
+      syncTokens(forceRefresh);
+    }
+  }, [data, loading, syncTokens, forceRefresh]);
 
   const themes = Object.keys(data?.brands ?? {});
+
+  useEffect(() => {
+    const brands = data?.brands ?? {};
+    const hasActiveTheme = activeTheme && Boolean(brands[activeTheme]);
+
+    if (hasActiveTheme) return;
+
+    const fallbackTheme = resolveDefaultThemeKey(brands);
+    if (fallbackTheme && fallbackTheme !== activeTheme) {
+      setActiveTheme(fallbackTheme);
+    }
+  }, [data, activeTheme, setActiveTheme]);
+
   const activeTokens = data?.brands?.[activeTheme]?.tokens ?? {};
   const activeBrandName = data?.brands?.[activeTheme]?.name ?? "No theme selected";
   const tokenEntries = useMemo(() => Object.entries(activeTokens).map(([name, token]) => ({
