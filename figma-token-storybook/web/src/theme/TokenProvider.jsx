@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import { applyTokensToRoot } from "./tokenUtils";
 
 const TokenContext = createContext(null);
+const DEFAULT_FILE_KEY = import.meta.env.VITE_FIGMA_FILE_KEY || import.meta.env.VITE_FIGMA_FILE_ID ;
 
 function normalizeThemeName(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -24,7 +25,7 @@ function resolveDefaultThemeKey(brands = {}) {
 }
 
 export function TokenProvider({ children }) {
-  const [fileKey, setFileKey] = useState("YMHme3s5OVuqqrgT6qJxii");
+  const [fileKey, setFileKey] = useState(DEFAULT_FILE_KEY);
   const [data, setData] = useState(null);
   const [activeTheme, setActiveTheme] = useState("");
   const [loading, setLoading] = useState(false);
