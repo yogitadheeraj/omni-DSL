@@ -2,10 +2,13 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { readdirSync, readFileSync, existsSync } from "fs";
+import { resolve } from "path";
 import { getFigmaVariablesCached, getFigmaFileCached } from "./figmaClient.js";
 import { normalizeFigmaVariables } from "./tokenNormalizer.js";
 import { generateCssVariables } from "./cssGenerator.js";
 import { createOmniDsl } from "./omniDsl.js";
+import { writeBrandTokenFiles, BRAND_TOKENS_DIR } from "./brandTokenWriter.js";
 
 dotenv.config();
 
@@ -30,12 +33,16 @@ app.get("/api/figma/:fileKey/variables", async (req, res) => {
     const normalized = normalizeFigmaVariables(rawVariables);
     const omniDsl = createOmniDsl(normalized, fileKey);
 
+    // Write one JSON file per brand so consumers can load them independently
+    const writtenFiles = writeBrandTokenFiles(normalized);
+
     res.json({
       fileKey,
       source: cache.hit ? "figma-cache" : "figma-live",
       generatedAt: new Date().toISOString(),
       cache,
       omniDsl,
+      brandTokenFiles: writtenFiles.map((f) => ({ brandKey: f.brandKey, path: `/api/brand-tokens/${f.brandKey}` })),
       ...normalized
     });
   } catch (error) {
@@ -107,6 +114,44 @@ app.get("/api/figma/:fileKey/omni-dsl", async (req, res) => {
       message: "Failed to generate Omni DSL",
       error: error.message
     });
+  }
+});
+
+// ─── Brand token file endpoints ─────────────────────────────────────────────
+
+// List all available brand JSON files
+app.get("/api/brand-tokens", (_req, res) => {
+  try {
+    if (!existsSync(BRAND_TOKENS_DIR)) {
+      return res.json({ brands: [] });
+    }
+
+    const files = readdirSync(BRAND_TOKENS_DIR).filter((f) => f.endsWith(".json"));
+    const brands = files.map((file) => {
+      const brandKey = file.replace(/\.json$/, "");
+      return { brandKey, path: `/api/brand-tokens/${brandKey}` };
+    });
+
+    res.json({ brands });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to list brand tokens", error: error.message });
+  }
+});
+
+// Serve a single brand's token JSON
+app.get("/api/brand-tokens/:brandKey", (req, res) => {
+  try {
+    const { brandKey } = req.params;
+    const filePath = resolve(BRAND_TOKENS_DIR, `${brandKey}.json`);
+
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ message: `Brand '${brandKey}' not found. Run a sync first.` });
+    }
+
+    const json = JSON.parse(readFileSync(filePath, "utf-8"));
+    res.json(json);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to read brand token file", error: error.message });
   }
 });
 

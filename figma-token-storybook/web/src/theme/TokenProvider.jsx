@@ -28,16 +28,18 @@ export function TokenProvider({ children }) {
   const [data, setData] = useState(null);
   const [activeTheme, setActiveTheme] = useState("");
   const [loading, setLoading] = useState(false);
+  // brandJsonMap: { [brandKey]: { brandKey, brandName, tokens, generatedAt } }
+  const [brandJsonMap, setBrandJsonMap] = useState({});
 
   async function syncTokens(forceRefresh = false) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (forceRefresh) {
-        params.set("forceRefresh", "true");
-      }
-      const queryString = params.toString();
-      const response = await fetch(`http://localhost:4000/api/figma/${fileKey}/variables${queryString ? `?${queryString}` : ""}`);
+      if (forceRefresh) params.set("forceRefresh", "true");
+      const qs = params.toString();
+      const response = await fetch(
+        `http://localhost:4000/api/figma/${fileKey}/variables${qs ? `?${qs}` : ""}`
+      );
       const json = await response.json();
       setData(json);
 
@@ -46,6 +48,33 @@ export function TokenProvider({ children }) {
 
       if (defaultTheme && json.brands?.[defaultTheme]?.tokens) {
         applyTokensToRoot(json.brands[defaultTheme].tokens);
+      }
+
+      // Load every brand JSON file the server just wrote
+      try {
+        const listRes = await fetch("http://localhost:4000/api/brand-tokens");
+        const listJson = await listRes.json();
+        const brandFiles = listJson.brands ?? [];
+
+        const entries = await Promise.all(
+          brandFiles.map(async ({ brandKey, path }) => {
+            try {
+              const r = await fetch(`http://localhost:4000${path}`);
+              const bJson = await r.json();
+              return [brandKey, bJson];
+            } catch {
+              return [brandKey, null];
+            }
+          })
+        );
+
+        const map = {};
+        for (const [key, val] of entries) {
+          if (val) map[key] = val;
+        }
+        setBrandJsonMap(map);
+      } catch {
+        // brand-tokens endpoint not yet seeded; ignore
       }
     } finally {
       setLoading(false);
@@ -65,8 +94,9 @@ export function TokenProvider({ children }) {
     activeTheme,
     setActiveTheme,
     loading,
-    syncTokens
-  }), [fileKey, data, activeTheme, loading]);
+    syncTokens,
+    brandJsonMap
+  }), [fileKey, data, activeTheme, loading, brandJsonMap]);
 
   return <TokenContext.Provider value={value}>{children}</TokenContext.Provider>;
 }

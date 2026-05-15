@@ -219,7 +219,7 @@ function FundamentalsSection({
   return (
     <section style={{ padding: layoutSectionPadding, borderTop: "1px solid #d4d4d8", background: "#f3f4f6" }}>
       <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900">Design Tokens</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Design Tokens System</h2>
         <p className="text-sm text-slate-600">Specification pattern view for the selected brand, aligned to token documentation style.</p>
       </div>
 

@@ -48,7 +48,7 @@ export function ComponentGallery() {
             <Badge variant="info">Info</Badge>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <Alert variant="success" title="Synced" description="Figma variables are synced successfully." />
+            <Alert variant="success" title="Synced" description="Figma variables are synced successfully.d" />
             <Alert variant="warning" title="Review Required" description="Some tokens need business approval." />
           </div>
         </Section>
